@@ -53,10 +53,8 @@ standaloneHTML = standaloneHTML
   .replace(/>\s+</g, "><")            // Remove space between tags
   .trim();
 
-// 5. Write standalone HTML
-await Bun.write("./dist/index.html", standaloneHTML);
-
-// 6. Embed HTML into TypeScript module for compilation (compressed)
+// 5. Embed HTML into TypeScript module for compilation (compressed)
+// (No need to write index.html to dist - it's embedded in the binary)
 const embeddedHtmlTs = `// Auto-generated - do not edit manually\nexport const htmlContent = ${JSON.stringify(standaloneHTML)};\n`;
 await Bun.write("./src/embedded-html.ts", embeddedHtmlTs);
 

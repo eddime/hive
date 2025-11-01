@@ -4,6 +4,28 @@ import config from "../hive.config";
 console.log(`🐝 Building ${config.app.name} v${config.app.version}...`);
 console.log(`🎯 Target: ${process.platform}-${process.arch}\n`);
 
+// Clean dist directory first
+console.log("🗑️  Cleaning dist directory...");
+try {
+  const distFiles = await Array.fromAsync(new Bun.Glob("*").scan(config.build.outdir));
+  for (const file of distFiles) {
+    const fullPath = `${config.build.outdir}/${file}`;
+    try {
+      // Skip .gitkeep
+      if (file !== ".gitkeep") {
+        Bun.spawnSync(["rm", "-rf", fullPath]);
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+} catch (e) {
+  // dist folder might not exist yet
+}
+
+// Ensure dist directory exists
+await Bun.write(`${config.build.outdir}/.gitkeep`, "");
+
 // Build frontend first
 console.log("📦 Building frontend...");
 const frontendBuild = Bun.spawnSync(["bun", "run", "build:frontend"], {
@@ -17,9 +39,6 @@ if (frontendBuild.exitCode !== 0) {
 }
 
 console.log("\n🔨 Compiling binary...");
-
-// Ensure dist directory exists
-await Bun.write(`${config.build.outdir}/.gitkeep`, "");
 
 const outfile = `${config.build.outdir}/${config.build.outfile}`;
 const buildArgs = [
@@ -70,8 +89,8 @@ if (exitCode === 0) {
     console.warn(`   ⚠️  Failed to copy ${libName}:`, e);
   }
   
-  // macOS Icon integration (if on macOS and icon exists)
-  if (process.platform === "darwin" && config.build.macos?.icon) {
+  // macOS .app bundle creation (if enabled)
+  if (process.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
     try {
       const iconPath = config.build.macos.icon;
       const iconFile = Bun.file(iconPath);
@@ -151,7 +170,7 @@ exec "$DIR/${appName}-bin" "$@"
   }
   
   console.log(`\n✅ Build successful in ${buildTime}s!`);
-  if (process.platform === "darwin" && config.build.macos?.icon) {
+  if (process.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
     console.log(`   📦 ${config.build.outdir}/${config.app.name}.app`);
   } else {
     console.log(`   📦 ${outfile} (${sizeMB} MB)`);

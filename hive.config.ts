@@ -9,7 +9,7 @@ export default {
     height: 720,
     resizable: true,        // Allow window resizing
     fullscreen: false,      // F11 to toggle fullscreen
-    startFullscreen: true, // Auto-fullscreen on launch (games, kiosk mode)
+    startFullscreen: false, // Auto-fullscreen on launch (games, kiosk mode)
     debug: isDev,           // DevTools only in development
   },
 
@@ -36,10 +36,11 @@ export default {
     // Platform-specific settings
     windows: {
       icon: "assets/icon.ico",  // Windows .ico file
-      hideConsole: false,       // Set to true for GUI-only apps
+      hideConsole: true,        // Hide console window for GUI apps
     },
     macos: {
       icon: "assets/icon.icns", // macOS .icns file (optional)
+      createAppBundle: true,    // Create .app bundle (true) or standalone binary (false)
     },
     linux: {
       icon: "assets/icon.png",  // Linux .png file (for desktop entries)

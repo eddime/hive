@@ -36,7 +36,7 @@ function main() {
   // Set HTML and run (blocking - returns when window closes)
   webview.setHTML(finalHTML);
   webview.run();
-  
+
   // webview.run() blocks until window is closed
   // No need for process.exit() - process ends naturally
 }

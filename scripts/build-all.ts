@@ -11,6 +11,28 @@ const targets = [
 
 console.log(`🐝 Building ${config.app.name} v${config.app.version} for all platforms...\n`);
 
+// Clean dist directory first
+console.log("🗑️  Cleaning dist directory...");
+try {
+  const distFiles = await Array.fromAsync(new Bun.Glob("*").scan(config.build.outdir));
+  for (const file of distFiles) {
+    const fullPath = `${config.build.outdir}/${file}`;
+    try {
+      // Skip .gitkeep
+      if (file !== ".gitkeep") {
+        Bun.spawnSync(["rm", "-rf", fullPath]);
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+} catch (e) {
+  // dist folder might not exist yet
+}
+
+// Ensure dist directory exists
+await Bun.write(`${config.build.outdir}/.gitkeep`, "");
+
 // Build frontend first
 console.log("📦 Building frontend...");
 const frontendBuild = Bun.spawnSync(["bun", "run", "build:frontend"], {
@@ -25,9 +47,6 @@ if (frontendBuild.exitCode !== 0) {
 
 console.log("\n🔨 Compiling binaries...\n");
 
-// Ensure dist directory exists
-await Bun.write(`${config.build.outdir}/.gitkeep`, "");
-
 const buildResults = [];
 
 for (const target of targets) {
@@ -35,6 +54,18 @@ for (const target of targets) {
   const targetStr = `bun-${target.platform}-${target.arch}`;
   
   console.log(`⚙️  Building ${target.name}...`);
+  
+  // Platform-specific flags (only work when building ON that platform)
+  const platformFlags = [];
+  if (target.platform === "windows" && process.platform === "win32") {
+    // Windows-specific flags only work when building ON Windows
+    if (config.build.windows?.icon) {
+      platformFlags.push(`--windows-icon=${config.build.windows.icon}`);
+    }
+    if (config.build.windows?.hideConsole) {
+      platformFlags.push("--windows-hide-console");
+    }
+  }
   
   const buildArgs = [
     "build",
@@ -44,8 +75,7 @@ for (const target of targets) {
     "--minify",
     // Sourcemaps disabled in production builds to reduce size
     config.build.bytecode ? "--bytecode" : "",
-    // Note: --windows-icon only works when building ON Windows
-    // For cross-platform builds, icon must be added post-build with tools like ResourceHacker
+    ...platformFlags,
     "./src/index.ts",
     "--outfile",
     outfile,
@@ -62,8 +92,8 @@ for (const target of targets) {
     const stats = await Bun.file(outfile).stat();
     const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
     
-    // macOS Icon integration for darwin builds
-    if (target.platform === "darwin" && config.build.macos?.icon) {
+    // macOS .app bundle creation (if enabled)
+    if (target.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
       try {
         const iconPath = config.build.macos.icon;
         const iconFile = Bun.file(iconPath);
@@ -133,8 +163,8 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
       }
     }
     
-    // For macOS builds, use .app path in results
-    const finalPath = target.platform === "darwin" && config.build.macos?.icon
+    // For macOS builds, use .app path in results if bundle was created
+    const finalPath = target.platform === "darwin" && config.build.macos?.createAppBundle !== false
       ? `${config.build.outdir}/${config.build.outfile}-${target.platform}-${target.arch}.app`
       : outfile;
     
