@@ -1,56 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hive - Fullstack App</title>
-    <!-- 👉 Styles are auto-injected during build -->
-    <link rel="stylesheet" href="./styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- 🐝 Hive Frontend - Your UI -->
-    <!-- 👉 PUT YOUR HTML HERE -->
-    <div class="container">
-        <header>
-            <h1>🐝 Hive</h1>
-            <p class="subtitle">Fullstack Desktop Frameworkssss</p>
-        </header>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="icon">🐝</span>
+        <h1>Hive</h1>
+      </div>
+      <div class="meta">
+        <span class="tag">v<span id="version">1.0</span></span>
+        <span class="tag green">Bindings</span>
+      </div>
+    </header>
 
-        <main>
-            <div class="info-card">
-                <h2>System Info</h2>
-                <p>Bun Version: <span id="bun-version">Loading...</span></p>
-                <p>Server: <span id="server-status">Connected</span></p>
-                <button id="test-backend-btn" class="test-btn">🔄 Test Backend Connection</button>
-                <p id="backend-response" style="margin-top: 1rem; font-weight: bold;"></p>
-            </div>
+    <!-- Counter -->
+    <main class="main">
+      <div class="counter-section">
+        <div class="label">Counter</div>
+        <div id="counter" class="counter">0</div>
+        <div class="sublabel">Direct Bindings • &lt;1ms</div>
+      </div>
 
-            <div class="section">
-                <h2>User Management</h2>
-                
-                <form id="user-form" class="form">
-                    <input 
-                        type="text" 
-                        id="user-name" 
-                        placeholder="Name" 
-                        required 
-                    />
-                    <input 
-                        type="email" 
-                        id="user-email" 
-                        placeholder="Email" 
-                        required 
-                    />
-                    <button type="submit">Add User</button>
-                </form>
+      <!-- Controls -->
+      <div class="controls">
+        <button onclick="decrement()" class="btn btn-secondary">
+          <span class="btn-icon">−</span>
+        </button>
+        <button onclick="increment()" class="btn btn-primary">
+          <span class="btn-icon">+</span>
+        </button>
+      </div>
 
-                <div id="users-list" class="users-list">
-                    <p class="empty-state">No users yet. Add one above!</p>
-                </div>
-            </div>
-        </main>
-    </div>
+      <button onclick="reset()" class="btn btn-text">
+        <span class="btn-icon">↻</span>
+        Reset
+      </button>
+    </main>
 
-    <script src="./app.ts"></script>
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="info">
+        <span class="dot"></span>
+        <span>Ready</span>
+      </div>
+      <div class="hint">Press F11 for fullscreen</div>
+    </footer>
+  </div>
+
+  <script type="module" src="app.ts"></script>
 </body>
 </html>

@@ -26,8 +26,11 @@ const buildArgs = [
   "build",
   "--compile",
   config.build.minify ? "--minify" : "",
-  config.build.sourcemap ? "--sourcemap=external" : "",
+  // Sourcemaps disabled in production builds to reduce size
   config.build.bytecode ? "--bytecode" : "",
+  // Windows-specific flags (only work when building ON Windows)
+  ...(process.platform === "win32" && config.build.windows?.icon ? [`--windows-icon=${config.build.windows.icon}`] : []),
+  ...(process.platform === "win32" && config.build.windows?.hideConsole ? ["--windows-hide-console"] : []),
   "./src/index.ts",
   "--outfile",
   outfile,
@@ -50,8 +53,109 @@ if (exitCode === 0) {
   const stats = await Bun.file(outfile).stat();
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
   
+  // Copy webview library next to binary
+  const libName = process.platform === "win32" 
+    ? "libwebview.dll" 
+    : process.platform === "linux"
+    ? `libwebview-${process.arch}.so`
+    : "libwebview.dylib";
+  
+  const libSource = `node_modules/webview-bun/build/${libName}`;
+  const libDest = `${config.build.outdir}/${libName}`;
+  
+  try {
+    await Bun.write(libDest, Bun.file(libSource));
+    console.log(`   📚 ${libName} copied`);
+  } catch (e) {
+    console.warn(`   ⚠️  Failed to copy ${libName}:`, e);
+  }
+  
+  // macOS Icon integration (if on macOS and icon exists)
+  if (process.platform === "darwin" && config.build.macos?.icon) {
+    try {
+      const iconPath = config.build.macos.icon;
+      const iconFile = Bun.file(iconPath);
+      
+      if (await iconFile.exists()) {
+        console.log(`   🎨 Adding macOS icon...`);
+        
+        // Create .app bundle structure
+        const appName = config.app.name || "hive";
+        const appPath = `${config.build.outdir}/${appName}.app`;
+        const contentsPath = `${appPath}/Contents`;
+        const macosPath = `${contentsPath}/MacOS`;
+        const resourcesPath = `${contentsPath}/Resources`;
+        
+        // Create directories
+        await Bun.write(`${macosPath}/.gitkeep`, "");
+        await Bun.write(`${resourcesPath}/.gitkeep`, "");
+        
+        // Copy binary to .app bundle (rename to avoid conflict with launcher)
+        const bundledBinary = `${macosPath}/${appName}-bin`;
+        await Bun.write(bundledBinary, Bun.file(outfile));
+        Bun.spawnSync(["chmod", "+x", bundledBinary]);
+        
+        // Copy icon and dylib
+        await Bun.write(`${resourcesPath}/icon.icns`, iconFile);
+        await Bun.write(`${macosPath}/libwebview.dylib`, Bun.file(libDest));
+        
+        // Create launcher script that sets DYLD_LIBRARY_PATH
+        const launcher = `#!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
+exec "$DIR/${appName}-bin" "$@"
+`;
+        await Bun.write(`${macosPath}/${appName}`, launcher);
+        Bun.spawnSync(["chmod", "+x", `${macosPath}/${appName}`]);
+        
+        // Create Info.plist
+        const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>${appName}</string>
+  <key>CFBundleIconFile</key>
+  <string>icon</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.${appName}.app</string>
+  <key>CFBundleName</key>
+  <string>${config.window.title || appName}</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>${config.app.version}</string>
+  <key>CFBundleVersion</key>
+  <string>${config.app.version}</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>10.13</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>`;
+        
+        await Bun.write(`${contentsPath}/Info.plist`, plist);
+        
+        // Delete standalone binary (we only need the .app)
+        try {
+          Bun.spawnSync(["rm", outfile]);
+          console.log(`   ✅ ${appName}.app bundle created with icon`);
+          console.log(`   🗑️  Standalone binary removed (using .app only)`);
+        } catch (e) {
+          console.log(`   ✅ ${appName}.app bundle created with icon`);
+        }
+      }
+    } catch (e) {
+      console.warn(`   ⚠️  macOS icon setup failed:`, e);
+    }
+  }
+  
   console.log(`\n✅ Build successful in ${buildTime}s!`);
-  console.log(`   📦 ${outfile} (${sizeMB} MB)`);
+  if (process.platform === "darwin" && config.build.macos?.icon) {
+    console.log(`   📦 ${config.build.outdir}/${config.app.name}.app`);
+  } else {
+    console.log(`   📦 ${outfile} (${sizeMB} MB)`);
+  }
   console.log(`   🎯 Platform: ${process.platform}-${process.arch}`);
   console.log(`\n💡 Tip: Run "bun run build:all" to build for all platforms`);
 } else {

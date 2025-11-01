@@ -4,7 +4,7 @@ import { spawn } from "bun";
 import config from "../hive.config";
 
 console.log(`🐝 Starting ${config.app.name} in development mode...`);
-console.log(`🔥 Hot Reload: ${config.server.hmr ? "ENABLED" : "DISABLED"}\n`);
+console.log(`🔥 Hot Reload: ${config.dev.hmr ? "ENABLED" : "DISABLED"}\n`);
 
 let appProcess: ReturnType<typeof spawn> | null = null;
 let isRebuilding = false;
@@ -29,6 +29,14 @@ function startApp() {
     stderr: "inherit",
   });
   
+  // Listen for app exit (when window is closed)
+  appProcess.exited.then((exitCode) => {
+    if (!isRebuilding && exitCode === 0) {
+      console.log("\n👋 App closed. Shutting down dev server...");
+      process.exit(0);
+    }
+  });
+  
   console.log("✅ App started\n");
 }
 
@@ -48,7 +56,7 @@ await buildFrontend();
 startApp();
 
 // Watch frontend files
-if (config.server.hmr) {
+if (config.dev.hmr) {
   console.log("👀 Watching for changes in src/frontend/...\n");
   
   watch("src/frontend", { recursive: true }, (event, filename) => {

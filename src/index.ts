@@ -3,30 +3,13 @@
 // 👉 Edit your app in src/frontend/ and src/backend/
 
 import { Webview, SizeHint } from "webview-bun";
-import server, { port, getUsers, createUser, deleteUser } from "./backend/server";
 import { htmlContent } from "./embedded-html";
 import config from "../hive.config";
+import { registerBindings } from "./backend/bindings";
 
-// Wrap everything in an async function
-async function main() {
-  const SERVER_URL = `http://localhost:${port}`;
-
-  // Wait for server to be ready
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  console.log(`🌐 Server running at ${SERVER_URL}`);
-  console.log(`📱 Opening webview...`);
-
-  // Inject the API base URL and Bun version into the HTML
-  const modifiedHTML = htmlContent.replace(
-    /<script>/,
-    `<script>
-      window.API_BASE_URL = "${SERVER_URL}";
-      window.BUN_VERSION = "${Bun.version}";
-    `
-  );
-
-  // Create webview with config
+// Main entry - optimized for speed
+function main() {
+  // Create webview with normal size first
   const webview = new Webview(config.window.debug, {
     width: config.window.width,
     height: config.window.height,
@@ -35,61 +18,33 @@ async function main() {
 
   webview.title = config.window.title;
 
-  // Set fullscreen if configured
-  if (config.window.fullscreen) {
-    // Note: webview-bun doesn't have direct fullscreen API
-    // We inject JavaScript to handle fullscreen via HTML5 Fullscreen API
-    console.log("⚠️  Fullscreen mode requested - use F11 to toggle fullscreen");
-  }
+  // Register bindings before HTML injection
+  registerBindings(webview);
 
-  // Register bindings (moved to separate module for cleaner code)
-  const { registerBindings } = await import("./backend/bindings");
-  registerBindings(webview, SERVER_URL, getUsers, createUser, deleteUser);
+  // Build fullscreen script
+  const isFullscreen = config.window.startFullscreen;
+  const fullscreenScript = isFullscreen
+    ? `setTimeout(()=>document.documentElement.requestFullscreen().catch(e=>console.warn('Fullscreen failed:',e)),100);document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`
+    : `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
 
-  // Inject fullscreen toggle capability
-  const htmlWithFullscreen = modifiedHTML.replace(
-    '</body>',
-    `
-    <script>
-      // F11 for fullscreen toggle
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'F11') {
-          e.preventDefault();
-          if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-          } else {
-            document.exitFullscreen();
-          }
-        }
-      });
-      
-      // Auto-fullscreen on load if configured
-      if (${config.window.fullscreen}) {
-        window.addEventListener('load', () => {
-          setTimeout(() => {
-            document.documentElement.requestFullscreen().catch(err => {
-              console.log('Fullscreen request failed:', err);
-            });
-          }, 500);
-        });
-      }
-    </script>
-    </body>`
+  // Single-pass HTML injection
+  const finalHTML = htmlContent.replace(
+    /<script>/,
+    `<script>window.BUN_VERSION="${Bun.version}";${fullscreenScript}`
   );
 
-  // Use setHTML with fully inlined content
-  webview.setHTML(htmlWithFullscreen);
-  console.log("✅ HTML set");
-
-  // Run webview (blocks until window is closed)
+  // Set HTML and run (blocking - returns when window closes)
+  webview.setHTML(finalHTML);
   webview.run();
-
-  console.log("👋 Webview closed");
-  process.exit(0);
+  
+  // webview.run() blocks until window is closed
+  // No need for process.exit() - process ends naturally
 }
 
-// Start the application
-main().catch((error) => {
+// Start immediately
+try {
+  main();
+} catch (error) {
   console.error("Fatal error:", error);
   process.exit(1);
-});
+}

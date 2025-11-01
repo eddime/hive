@@ -42,8 +42,10 @@ for (const target of targets) {
     "--target",
     targetStr,
     "--minify",
-    "--sourcemap=external",
+    // Sourcemaps disabled in production builds to reduce size
     config.build.bytecode ? "--bytecode" : "",
+    // Note: --windows-icon only works when building ON Windows
+    // For cross-platform builds, icon must be added post-build with tools like ResourceHacker
     "./src/index.ts",
     "--outfile",
     outfile,
@@ -60,15 +62,91 @@ for (const target of targets) {
     const stats = await Bun.file(outfile).stat();
     const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
     
+    // macOS Icon integration for darwin builds
+    if (target.platform === "darwin" && config.build.macos?.icon) {
+      try {
+        const iconPath = config.build.macos.icon;
+        const iconFile = Bun.file(iconPath);
+        
+        if (await iconFile.exists()) {
+          const appName = `${config.build.outfile}-${target.platform}-${target.arch}`;
+          const appPath = `${config.build.outdir}/${appName}.app`;
+          const contentsPath = `${appPath}/Contents`;
+          const macosPath = `${contentsPath}/MacOS`;
+          const resourcesPath = `${contentsPath}/Resources`;
+          
+          // Create .app bundle
+          await Bun.write(`${macosPath}/.gitkeep`, "");
+          await Bun.write(`${resourcesPath}/.gitkeep`, "");
+          
+          // Copy binary (keep original name for now)
+          const bundledBinary = `${macosPath}/${config.build.outfile}-bin`;
+          await Bun.write(bundledBinary, Bun.file(outfile));
+          Bun.spawnSync(["chmod", "+x", bundledBinary]);
+          
+          // Copy icon and dylib
+          await Bun.write(`${resourcesPath}/icon.icns`, iconFile);
+          await Bun.write(`${macosPath}/libwebview.dylib`, Bun.file(`node_modules/webview-bun/build/libwebview.dylib`));
+          
+          // Create launcher script that sets DYLD_LIBRARY_PATH
+          const launcher = `#!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
+exec "$DIR/${config.build.outfile}-bin" "$@"
+`;
+          await Bun.write(`${macosPath}/${config.build.outfile}`, launcher);
+          Bun.spawnSync(["chmod", "+x", `${macosPath}/${config.build.outfile}`]);
+          
+          // Create Info.plist
+          const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>${config.build.outfile}</string>
+  <key>CFBundleIconFile</key>
+  <string>icon</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.${config.app.name}.app</string>
+  <key>CFBundleName</key>
+  <string>${config.window.title}</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>${config.app.version}</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>`;
+          await Bun.write(`${contentsPath}/Info.plist`, plist);
+          
+          // Delete standalone binary (we only need the .app)
+          try {
+            await Bun.write(outfile, ""); // Clear file
+            Bun.spawnSync(["rm", outfile]); // Delete it
+          } catch (e) {
+            // Ignore if already deleted
+          }
+        }
+      } catch (e) {
+        console.warn(`   ⚠️  Icon setup failed: ${e}`);
+      }
+    }
+    
+    // For macOS builds, use .app path in results
+    const finalPath = target.platform === "darwin" && config.build.macos?.icon
+      ? `${config.build.outdir}/${config.build.outfile}-${target.platform}-${target.arch}.app`
+      : outfile;
+    
     buildResults.push({
       name: target.name,
-      file: outfile,
+      file: finalPath,
       size: sizeMB,
       time: buildTime,
       success: true,
     });
     
-    console.log(`   ✅ ${outfile} (${sizeMB} MB) in ${buildTime}s`);
+    console.log(`   ✅ ${finalPath} (${sizeMB} MB) in ${buildTime}s`);
   } else {
     buildResults.push({
       name: target.name,

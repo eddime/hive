@@ -1,7 +1,7 @@
 // Build frontend and inline everything into one HTML file
 console.log("📦 Building frontend...");
 
-// 1. Bundle JavaScript with aggressive optimization
+// 1. Bundle JavaScript with maximum optimization
 const jsResult = await Bun.build({
   entrypoints: ["./src/frontend/app.ts"],
   minify: {
@@ -10,8 +10,13 @@ const jsResult = await Bun.build({
     syntax: true,
   },
   target: "browser",
-  splitting: false,  // No code splitting for single file
-  treeshaking: true, // Remove unused code
+  format: "esm",
+  splitting: false,
+  treeshaking: true,
+  define: {
+    "import.meta.env.MODE": '"production"',
+    "process.env.NODE_ENV": '"production"'
+  },
 });
 
 if (!jsResult.success) {
@@ -38,8 +43,8 @@ const htmlTemplate = await Bun.file("./src/frontend/index.html").text();
 
 // 4. Create standalone HTML with inlined CSS and JS (minified)
 let standaloneHTML = htmlTemplate
-  .replace('<link rel="stylesheet" href="./styles.css" />', `<style>${cssCode}</style>`)
-  .replace('<script src="./app.ts"></script>', `<script>${jsCode}</script>`);
+  .replace(/<link[^>]*href=["']styles\.css["'][^>]*>/i, `<style>${cssCode}</style>`)
+  .replace(/<script[^>]*src=["']app\.ts["'][^>]*><\/script>/i, `<script>${jsCode}</script>`);
 
 // Minify HTML
 standaloneHTML = standaloneHTML
