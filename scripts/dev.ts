@@ -24,7 +24,7 @@ function startApp() {
     appProcess.kill();
   }
   
-  appProcess = spawn(["bun", "run", "src/index.ts"], {
+  appProcess = spawn(["bun", "run", "src/main.ts"], {
     stdout: "inherit",
     stderr: "inherit",
   });

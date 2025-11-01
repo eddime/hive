@@ -50,7 +50,7 @@ const buildArgs = [
   // Windows-specific flags (only work when building ON Windows)
   ...(process.platform === "win32" && config.build.windows?.icon ? [`--windows-icon=${config.build.windows.icon}`] : []),
   ...(process.platform === "win32" && config.build.windows?.hideConsole ? ["--windows-hide-console"] : []),
-  "./src/index.ts",
+  "./src/main.ts",
   "--outfile",
   outfile,
 ].filter(Boolean);

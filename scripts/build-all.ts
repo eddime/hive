@@ -76,7 +76,7 @@ for (const target of targets) {
     // Sourcemaps disabled in production builds to reduce size
     config.build.bytecode ? "--bytecode" : "",
     ...platformFlags,
-    "./src/index.ts",
+    "./src/main.ts",
     "--outfile",
     outfile,
   ].filter(Boolean);

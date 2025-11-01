@@ -2,7 +2,7 @@
 // 👉 REGISTER YOUR BACKEND FUNCTIONS HERE
 
 import type { Webview } from "webview-bun";
-import { registerBindings as register } from "../core/bindings";
+import { registerBindings as register } from "../../lib/bindings";
 import * as backend from "./server";
 
 export function registerBindings(webview: Webview) {
