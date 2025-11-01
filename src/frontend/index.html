@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hive - Fullstack App</title>
+    <!-- 👉 Styles are auto-injected during build -->
+    <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+    <!-- 🐝 Hive Frontend - Your UI -->
+    <!-- 👉 PUT YOUR HTML HERE -->
+    <div class="container">
+        <header>
+            <h1>🐝 Hive</h1>
+            <p class="subtitle">Fullstack Desktop Frameworkssss</p>
+        </header>
+
+        <main>
+            <div class="info-card">
+                <h2>System Info</h2>
+                <p>Bun Version: <span id="bun-version">Loading...</span></p>
+                <p>Server: <span id="server-status">Connected</span></p>
+                <button id="test-backend-btn" class="test-btn">🔄 Test Backend Connection</button>
+                <p id="backend-response" style="margin-top: 1rem; font-weight: bold;"></p>
+            </div>
+
+            <div class="section">
+                <h2>User Management</h2>
+                
+                <form id="user-form" class="form">
+                    <input 
+                        type="text" 
+                        id="user-name" 
+                        placeholder="Name" 
+                        required 
+                    />
+                    <input 
+                        type="email" 
+                        id="user-email" 
+                        placeholder="Email" 
+                        required 
+                    />
+                    <button type="submit">Add User</button>
+                </form>
+
+                <div id="users-list" class="users-list">
+                    <p class="empty-state">No users yet. Add one above!</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="./app.ts"></script>
+</body>
+</html>

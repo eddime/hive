@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+bun.lockb
+
+# Build artifacts (binaries are too large for GitHub)
+dist/
+hive
+hive-*
+*.exe
+!dist/.gitkeep
+
+# Generated files
+src/embedded-html.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

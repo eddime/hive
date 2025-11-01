@@ -1,0 +1,23 @@
+{
+  "name": "hive",
+  "version": "1.0.0",
+  "description": "A lightweight fullstack desktop framework with Bun + Webview",
+  "type": "module",
+  "author": "Your Name",
+  "license": "MIT",
+  "keywords": ["bun", "webview", "desktop", "fullstack", "tauri-alternative", "electron-alternative"],
+  "scripts": {
+    "dev": "bun run scripts/dev.ts",
+    "dev:simple": "bun run build:frontend && bun run src/index.ts",
+    "build": "bun run scripts/build.ts",
+    "build:all": "bun run scripts/build-all.ts",
+    "build:frontend": "bun run scripts/build-frontend.ts",
+    "clean": "rm -rf dist src/embedded-html.ts"
+  },
+  "dependencies": {
+    "webview-bun": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
