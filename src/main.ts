@@ -331,14 +331,6 @@ const server = new AssetServer();
     if (event.data === 'stop') {
       server.stop();
       process.exit(0);
-    } else if (event.data.type === 'updateHTML') {
-      // Update HTML in cache for game mode
-      const content = new TextEncoder().encode(event.data.content);
-      server.cache.set(event.data.path, {
-        content,
-        lastUsed: Date.now()
-      });
-      console.log('🔄 HTML updated in cache:', event.data.path);
     }
   });
 })();
@@ -492,54 +484,14 @@ const server = new AssetServer();
       console.log(`📄 Base: ${baseURL}`);
     }
     
-    // Prevent reload from breaking the app (causes white screen)
-    const reloadPreventionScript = `
-      // Warn about reload
-      window.addEventListener('contextmenu', (e) => {
-        console.warn('⚠️  Right-click reload will cause white screen. Restart dev server instead.');
-      });
-      
-      // Block F5 and Ctrl+R reload
-      window.addEventListener('keydown', (e) => {
-        if ((e.key === 'F5') || (e.ctrlKey && e.key === 'r') || (e.metaKey && e.key === 'r')) {
-          e.preventDefault();
-          console.error('❌ Reload blocked! Asset server cannot be reloaded.');
-          console.log('💡 To reload: Stop app (Ctrl+C) and run: bun dev');
-          alert('⚠️ Reload disabled\\n\\nAsset server cannot be reloaded.\\n\\nTo see changes:\\n• Stop app (Ctrl+C)\\n• Run: bun dev');
-        }
-      });
-    `.trim();
-    
     // Inject JS utilities
     const finalHTML = htmlWithBase.replace(
       /<\/head>/i,
-      `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
+      `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}";</script></head>`
     );
 
-    // For games with external scripts (crossorigin), use navigate instead of setHTML
-    // setHTML creates origin 'null' which blocks CORS even with Access-Control-Allow-Origin: *
-    const hasCrossOriginScripts = html.includes('crossorigin=');
-    
-    if (hasCrossOriginScripts) {
-      // Game mode: Update HTML on asset server and navigate
-      console.log("🎮 Game detected - using navigate() for CORS support");
-      
-      // Tell worker to update the HTML with our modifications
-      worker.postMessage({
-        type: 'updateHTML',
-        path: entryPath,
-        content: finalHTML
-      });
-      
-      // Wait a bit for update
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Navigate to the server URL (proper origin for CORS)
-      webview.navigate(`${serverURL}${entryPath}`);
-    } else {
-      // Normal app mode: Use setHTML (bindings work instantly)
-      webview.setHTML(finalHTML);
-    }
+    // Use setHTML - bindings work!
+    webview.setHTML(finalHTML);
     
     // Run webview (blocking - returns when window closes)
     webview.run();

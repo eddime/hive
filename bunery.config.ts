@@ -10,7 +10,7 @@ export default {
     resizable: true,        // Allow window resizing
     fullscreen: false,      // F11 to toggle fullscreen
     startFullscreen: false,  // Auto-fullscreen on launch (games, kiosk mode)
-    debug: isDev,           // Enable debug logs (set to false for production)
+    debug: false,           // Enable debug logs (set to false for production)
   },
 
   // Development settings
@@ -39,7 +39,7 @@ export default {
       // Asset server: Embeds all files in binary, serves via HTTP at runtime
       // NO SIZE LIMITS! Works in dev AND production! 🚀
       assetServer: true,
-      entryPoint: "/game/index.html",  // Entry HTML file (Phaser Candy Catch game)
+      entryPoint: "index.html",  // Entry HTML file (Phaser Candy Catch game)
     },
     
     // Platform-specific settings

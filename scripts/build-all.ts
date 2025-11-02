@@ -40,7 +40,7 @@ await Bun.write(`${config.build.outdir}/.gitkeep`, "");
 
 // Build frontend first
 console.log("📦 Building frontend...");
-const frontendBuild = Bun.spawnSync(["bun", "run", "scripts/build-frontend.ts"], {
+const frontendBuild = Bun.spawnSync(["bun", "run", "bake:frontend"], {
   stdout: "inherit",
   stderr: "inherit",
 });
