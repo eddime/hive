@@ -38,7 +38,7 @@ async function main() {
 
   // Register bindings FIRST (before navigate!)
   registerBindings(webview);
-  
+
   // Wait for icon to finish loading
   const faviconBase64 = await iconPromise;
 
@@ -66,40 +66,75 @@ class AssetServer {
   constructor() {
     this.server = null;
     this.port = 0;
-    this.assets = new Map();
-    this.compressedCache = new Map(); // 🚀 BUN OPTIMIZATION: Cache compressed versions
+    // 🚀 OPTIMAL: Lazy loading + LRU cache (50MB)
+    this.assetPaths = new Map();
+    this.cache = new Map();
+    this.MAX_CACHE_SIZE = 50 * 1024 * 1024;
+    this.cacheSize = 0;
   }
 
   async addAsset(virtualPath, source, contentType) {
-    let content;
-    let type;
-
     if (typeof source === "string" && (source.startsWith("./") || source.startsWith("/"))) {
+      // 🚀 LAZY: Just store the path
       const file = Bun.file(source);
-      if (!(await file.exists())) {
-        throw new Error(\`Asset not found: \${source}\`);
+      let type = file.type || this.guessContentType(source);
+      
+      // TypeScript files should be served as JavaScript
+      if (source.endsWith('.ts') || source.endsWith('.tsx')) {
+        type = 'application/javascript';
       }
-      content = new Uint8Array(await file.arrayBuffer());
-      type = file.type || this.guessContentType(source);
+      
+      this.assetPaths.set(virtualPath, { filePath: source, type, size: file.size || 0 });
     } else {
-      content = source;
-      type = contentType || this.guessContentType(virtualPath);
+      // For inline content, cache immediately
+      const content = source instanceof Uint8Array ? source : new Uint8Array(source);
+      const type = contentType || this.guessContentType(virtualPath);
+      this.assetPaths.set(virtualPath, { filePath: \`inline:\${virtualPath}\`, type, size: content.length });
+      this.cache.set(virtualPath, { content, lastUsed: Date.now() });
+      this.cacheSize += content.length;
     }
+  }
 
-    this.assets.set(virtualPath, { content, type });
+  evictOldest() {
+    const sorted = Array.from(this.cache.entries())
+      .sort((a, b) => a[1].lastUsed - b[1].lastUsed);
     
-    // 🚀 BUN OPTIMIZATION: Pre-compress compressible assets
+    for (const [path, entry] of sorted) {
+      if (this.cacheSize <= this.MAX_CACHE_SIZE) break;
+      const size = entry.content.length + (entry.compressed?.length || 0);
+      this.cache.delete(path);
+      this.cacheSize -= size;
+    }
+  }
+
+  async loadIntoCache(virtualPath, filePath, type) {
+    const file = Bun.file(filePath);
+    let content;
+    
+    // 🚀 TYPESCRIPT TRANSPILATION: Convert .ts to .js on-the-fly
+    if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+      const transpiler = new Bun.Transpiler({ loader: 'tsx' });
+      const code = await transpiler.transform(await file.text());
+      content = new TextEncoder().encode(code);
+    } else {
+      content = new Uint8Array(await file.arrayBuffer());
+    }
+    
     const compressible = ['text/', 'application/javascript', 'application/json', 'image/svg'];
+    let compressed;
+    
     if (compressible.some(ct => type.includes(ct)) && content.length > 1024) {
       try {
-        const compressed = Bun.gzipSync(content);
-        if (compressed.length < content.length * 0.9) { // Only if >10% smaller
-          this.compressedCache.set(virtualPath, compressed);
-        }
-      } catch (e) {
-        // Compression failed, use original
-      }
+        const gzipped = Bun.gzipSync(content);
+        if (gzipped.length < content.length * 0.9) compressed = gzipped;
+      } catch (e) {}
     }
+
+    const entrySize = content.length + (compressed?.length || 0);
+    this.cacheSize += entrySize;
+    this.cache.set(virtualPath, { content, compressed, lastUsed: Date.now() });
+    
+    if (this.cacheSize > this.MAX_CACHE_SIZE) this.evictOldest();
   }
 
   async start(preferredPort = 0) {
@@ -108,7 +143,7 @@ class AssetServer {
       // 🚀 NATIVE PERFORMANCE: TCP optimizations
       reusePort: true,
       development: false,
-      fetch: (req) => {
+      fetch: async (req) => {
         const url = new URL(req.url);
         let path = decodeURIComponent(url.pathname);
 
@@ -116,54 +151,78 @@ class AssetServer {
           path = "/index.html";
         }
 
-        const asset = this.assets.get(path);
+        const assetMeta = this.assetPaths.get(path);
 
-        if (asset) {
-          // 🚀 NATIVE PERFORMANCE: Aggressive caching + ETag + compression
-          const etag = \`W/"\${path.length}-\${asset.content.length}"\`;
+        if (assetMeta) {
+          const acceptsGzip = req.headers.get("accept-encoding")?.includes("gzip");
+          let cached = this.cache.get(path);
           
-          // Check if client has cached version
-          if (req.headers.get("if-none-match") === etag) {
-            return new Response(null, { status: 304 });
+          if (cached) {
+            // 🚀 CACHE HIT!
+            cached.lastUsed = Date.now();
+            if (acceptsGzip && cached.compressed) {
+              return new Response(cached.compressed, {
+                headers: {
+                  "Content-Type": assetMeta.type,
+                  "Content-Encoding": "gzip",
+                  "Cache-Control": "public, max-age=31536000, immutable",
+                  "Access-Control-Allow-Origin": "*",
+                  "X-Content-Type-Options": "nosniff",
+                  "Vary": "Accept-Encoding",
+                },
+              });
+            }
+            return new Response(cached.content, {
+              headers: {
+                "Content-Type": assetMeta.type,
+                "Cache-Control": "public, max-age=31536000, immutable",
+                "Access-Control-Allow-Origin": "*",
+                "X-Content-Type-Options": "nosniff",
+              },
+            });
           }
           
-          // 🚀 BUN OPTIMIZATION: Serve compressed if available and accepted
-          const acceptsGzip = req.headers.get("accept-encoding")?.includes("gzip");
-          const compressed = this.compressedCache.get(path);
+          // 🚀 CACHE MISS: Load now
+          await this.loadIntoCache(path, assetMeta.filePath, assetMeta.type);
+          cached = this.cache.get(path);
           
-          if (acceptsGzip && compressed) {
-            const headers = {
-              "Content-Type": asset.type,
-              "Content-Encoding": "gzip",
+          if (acceptsGzip && cached.compressed) {
+            return new Response(cached.compressed, {
+              headers: {
+                "Content-Type": assetMeta.type,
+                "Content-Encoding": "gzip",
+                "Cache-Control": "public, max-age=31536000, immutable",
+                "Access-Control-Allow-Origin": "*",
+                "X-Content-Type-Options": "nosniff",
+                "Vary": "Accept-Encoding",
+              },
+            });
+          }
+          
+          return new Response(cached.content, {
+            headers: {
+              "Content-Type": assetMeta.type,
               "Cache-Control": "public, max-age=31536000, immutable",
-              "ETag": etag,
               "Access-Control-Allow-Origin": "*",
               "X-Content-Type-Options": "nosniff",
-              "Vary": "Accept-Encoding",
-            };
-            return new Response(compressed, { headers });
-          }
-          
-          const headers = {
-            "Content-Type": asset.type,
-            "Cache-Control": "public, max-age=31536000, immutable",
-            "ETag": etag,
-            "Access-Control-Allow-Origin": "*",
-            "X-Content-Type-Options": "nosniff",
-          };
-          
-          return new Response(asset.content, { headers });
+            },
+          });
         }
 
         const htmlPath = \`\${path}.html\`;
-        const htmlAsset = this.assets.get(htmlPath);
-        if (htmlAsset) {
-          const headers = {
-            "Content-Type": htmlAsset.type,
-            "Cache-Control": "public, max-age=31536000, immutable",
-          };
-          
-          return new Response(htmlAsset.content, { headers });
+        const htmlMeta = this.assetPaths.get(htmlPath);
+        if (htmlMeta) {
+          let cached = this.cache.get(htmlPath);
+          if (!cached) {
+            await this.loadIntoCache(htmlPath, htmlMeta.filePath, htmlMeta.type);
+            cached = this.cache.get(htmlPath);
+          }
+          return new Response(cached.content, {
+            headers: {
+              "Content-Type": htmlMeta.type,
+              "Cache-Control": "no-cache",
+            },
+          });
         }
 
         return new Response(\`Not Found: \${path}\`, { status: 404 });
@@ -283,6 +342,24 @@ const server = new AssetServer();
             document.body.style.transform = 'translateZ(0)';
             document.body.style.backfaceVisibility = 'hidden';
           });
+          
+          // 🔇 MACOS FIX: Prevent system beep sounds on keypress
+          // See: https://github.com/tauri-apps/wry/issues/799
+          document.addEventListener('keydown', (e) => {
+            // Prevent beep for all keys except when typing in input/textarea
+            const target = e.target;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+              return; // Allow normal behavior in text inputs
+            }
+            // For all other elements, prevent default to avoid beep
+            if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+              // Only prevent for non-modifier keys
+              const allowedKeys = ['Tab', 'Enter', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'F11'];
+              if (!allowedKeys.includes(e.key)) {
+                e.preventDefault();
+              }
+            }
+          }, true); // Use capture phase to catch all events
           
           // Override addEventListener to use passive listeners by default
           const originalAddEventListener = EventTarget.prototype.addEventListener;

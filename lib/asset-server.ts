@@ -4,48 +4,95 @@
 export class AssetServer {
   private server: any;
   private port: number = 0;
-  private assets: Map<string, { content: string | Uint8Array; type: string }> = new Map();
-  private compressedCache: Map<string, Uint8Array> = new Map(); // 🚀 BUN OPTIMIZATION
+  // 🚀 OPTIMAL: Store file paths (lazy) + LRU cache (fast repeat access)
+  private assetPaths: Map<string, { filePath: string; type: string; size: number }> = new Map();
+  private cache: Map<string, { content: Uint8Array; compressed?: Uint8Array; lastUsed: number }> = new Map();
+  private readonly MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB cache
+  private cacheSize = 0;
 
   /**
-   * Add an asset from file path or content
+   * Add an asset from file path (LAZY - instant startup!)
    */
   async addAsset(virtualPath: string, source: string | Uint8Array, contentType?: string) {
-    let content: string | Uint8Array;
-    let type: string;
-
     if (typeof source === "string" && (source.startsWith("./") || source.startsWith("/"))) {
-      // Load from file
+      // 🚀 LAZY: Just store the path, load on-demand
       const file = Bun.file(source);
-      if (!(await file.exists())) {
-        throw new Error(`Asset not found: ${source}`);
+      let type = file.type || this.guessContentType(source);
+      
+      // TypeScript files should be served as JavaScript
+      if (source.endsWith('.ts') || source.endsWith('.tsx')) {
+        type = 'application/javascript';
       }
-      content = new Uint8Array(await file.arrayBuffer());
-      type = file.type || this.guessContentType(source);
+      
+      this.assetPaths.set(virtualPath, { filePath: source, type, size: file.size || 0 });
     } else {
-      // Use provided content
-      content = source;
-      type = contentType || this.guessContentType(virtualPath);
-    }
-
-    this.assets.set(virtualPath, { content, type });
-    
-    // 🚀 BUN OPTIMIZATION: Pre-compress compressible assets
-    const compressible = ['text/', 'application/javascript', 'application/json', 'image/svg'];
-    if (compressible.some(ct => type.includes(ct)) && content.length > 1024) {
-      try {
-        const compressed = Bun.gzipSync(content);
-        if (compressed.length < content.length * 0.9) { // Only if >10% smaller
-          this.compressedCache.set(virtualPath, compressed);
-        }
-      } catch (e) {
-        // Compression failed, use original
-      }
+      // For inline content (rare), cache immediately
+      const content = source instanceof Uint8Array ? source : new Uint8Array(source as any);
+      const type = contentType || this.guessContentType(virtualPath);
+      this.assetPaths.set(virtualPath, { filePath: `inline:${virtualPath}`, type, size: content.length });
+      this.cache.set(virtualPath, { content, lastUsed: Date.now() });
+      this.cacheSize += content.length;
     }
   }
 
   /**
-   * Add entire directory recursively
+   * LRU Cache: Evict oldest items when cache is full
+   */
+  private evictOldest() {
+    const sorted = Array.from(this.cache.entries())
+      .sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+    
+    for (const [path, entry] of sorted) {
+      if (this.cacheSize <= this.MAX_CACHE_SIZE) break;
+      
+      const size = entry.content.length + (entry.compressed?.length || 0);
+      this.cache.delete(path);
+      this.cacheSize -= size;
+    }
+  }
+
+  /**
+   * Load asset into cache (with compression and TypeScript transpilation)
+   */
+  private async loadIntoCache(virtualPath: string, filePath: string, type: string): Promise<void> {
+    const file = Bun.file(filePath);
+    let content: Uint8Array;
+    
+    // 🚀 TYPESCRIPT TRANSPILATION: Convert .ts to .js on-the-fly
+    if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+      const transpiler = new Bun.Transpiler({ loader: 'tsx' });
+      const code = await transpiler.transform(await file.text());
+      content = new TextEncoder().encode(code);
+      type = 'application/javascript'; // Override type to JS
+    } else {
+      content = new Uint8Array(await file.arrayBuffer());
+    }
+    
+    // Compress if applicable
+    const compressible = ['text/', 'application/javascript', 'application/json', 'image/svg'];
+    let compressed: Uint8Array | undefined;
+    
+    if (compressible.some(ct => type.includes(ct)) && content.length > 1024) {
+      try {
+        const gzipped = Bun.gzipSync(content);
+        if (gzipped.length < content.length * 0.9) {
+          compressed = gzipped;
+        }
+      } catch (e) {}
+    }
+
+    const entrySize = content.length + (compressed?.length || 0);
+    this.cacheSize += entrySize;
+    this.cache.set(virtualPath, { content, compressed, lastUsed: Date.now() });
+    
+    // Evict old items if cache is full
+    if (this.cacheSize > this.MAX_CACHE_SIZE) {
+      this.evictOldest();
+    }
+  }
+
+  /**
+   * Add entire directory recursively (LAZY - stores paths, not content!)
    */
   async addDirectory(dirPath: string, virtualPrefix: string = "/") {
     const glob = new Bun.Glob("**/*");
@@ -61,11 +108,9 @@ export class AssetServer {
       
       try {
         if (await bunFile.exists()) {
-          // Read as binary to preserve images/audio/etc
-          const content = new Uint8Array(await bunFile.arrayBuffer());
+          // 🚀 LAZY: Just store the path
           const type = bunFile.type || this.guessContentType(fullPath);
-          
-          this.assets.set(virtualPath, { content, type });
+          this.assetPaths.set(virtualPath, { filePath: fullPath, type, size: bunFile.size || 0 });
           console.log(`   ✓ ${virtualPath} (${(bunFile.size / 1024).toFixed(1)} KB)`);
         }
       } catch (e) {
@@ -73,7 +118,7 @@ export class AssetServer {
       }
     }
     
-    console.log(`   📦 Loaded ${this.assets.size} assets`);
+    console.log(`   📦 Registered ${this.assetPaths.size} assets (lazy-loaded)`);
   }
 
   /**
@@ -85,7 +130,7 @@ export class AssetServer {
       // 🚀 NATIVE PERFORMANCE: TCP optimizations
       reusePort: true,
       development: false,
-      fetch: (req) => {
+      fetch: async (req) => {
         const url = new URL(req.url);
         // Decode URL to handle filenames with spaces, special chars, etc.
         let path = decodeURIComponent(url.pathname);
@@ -95,28 +140,51 @@ export class AssetServer {
           path = "/index.html";
         }
 
-        const asset = this.assets.get(path);
+        const assetMeta = this.assetPaths.get(path);
 
-        if (asset) {
-          // 🚀 NATIVE PERFORMANCE: ETag caching + compression
-          const etag = `W/"${path.length}-${asset.content.length}"`;
+        if (assetMeta) {
+          const acceptsGzip = req.headers.get("accept-encoding")?.includes("gzip");
           
-          // Check if client has cached version
-          if (req.headers.get("if-none-match") === etag) {
-            return new Response(null, { status: 304 });
+          // Check cache first
+          let cached = this.cache.get(path);
+          
+          if (cached) {
+            // 🚀 CACHE HIT: Instant serve from RAM!
+            cached.lastUsed = Date.now();
+            
+            if (acceptsGzip && cached.compressed) {
+              return new Response(cached.compressed, {
+                headers: {
+                  "Content-Type": assetMeta.type,
+                  "Content-Encoding": "gzip",
+                  "Cache-Control": "public, max-age=31536000, immutable",
+                  "Access-Control-Allow-Origin": "*",
+                  "X-Content-Type-Options": "nosniff",
+                  "Vary": "Accept-Encoding",
+                },
+              });
+            }
+            
+            return new Response(cached.content, {
+              headers: {
+                "Content-Type": assetMeta.type,
+                "Cache-Control": "public, max-age=31536000, immutable",
+                "Access-Control-Allow-Origin": "*",
+                "X-Content-Type-Options": "nosniff",
+              },
+            });
           }
           
-          // 🚀 BUN OPTIMIZATION: Serve compressed if available and accepted
-          const acceptsGzip = req.headers.get("accept-encoding")?.includes("gzip");
-          const compressed = this.compressedCache.get(path);
+          // 🚀 CACHE MISS: Load into cache
+          await this.loadIntoCache(path, assetMeta.filePath, assetMeta.type);
+          cached = this.cache.get(path)!;
           
-          if (acceptsGzip && compressed) {
-            return new Response(compressed, {
+          if (acceptsGzip && cached.compressed) {
+            return new Response(cached.compressed, {
               headers: {
-                "Content-Type": asset.type,
+                "Content-Type": assetMeta.type,
                 "Content-Encoding": "gzip",
                 "Cache-Control": "public, max-age=31536000, immutable",
-                "ETag": etag,
                 "Access-Control-Allow-Origin": "*",
                 "X-Content-Type-Options": "nosniff",
                 "Vary": "Accept-Encoding",
@@ -124,11 +192,10 @@ export class AssetServer {
             });
           }
           
-          return new Response(asset.content, {
+          return new Response(cached.content, {
             headers: {
-              "Content-Type": asset.type,
+              "Content-Type": assetMeta.type,
               "Cache-Control": "public, max-age=31536000, immutable",
-              "ETag": etag,
               "Access-Control-Allow-Origin": "*",
               "X-Content-Type-Options": "nosniff",
             },
@@ -137,19 +204,21 @@ export class AssetServer {
 
         // Try with .html extension
         const htmlPath = `${path}.html`;
-        const htmlAsset = this.assets.get(htmlPath);
-        if (htmlAsset) {
-          console.log(`✅ Serving: ${htmlPath} (${htmlAsset.type})`);
-          return new Response(htmlAsset.content, {
+        const htmlMeta = this.assetPaths.get(htmlPath);
+        if (htmlMeta) {
+          let cached = this.cache.get(htmlPath);
+          if (!cached) {
+            await this.loadIntoCache(htmlPath, htmlMeta.filePath, htmlMeta.type);
+            cached = this.cache.get(htmlPath)!;
+          }
+          return new Response(cached.content, {
             headers: {
-              "Content-Type": htmlAsset.type,
+              "Content-Type": htmlMeta.type,
               "Cache-Control": "no-cache",
             },
           });
         }
 
-        console.log(`❌ Not found: ${path}`);
-        console.log(`   Available: ${Array.from(this.assets.keys()).slice(0, 10).join(", ")}`);
         return new Response(`Not Found: ${path}`, { status: 404 });
       },
     });

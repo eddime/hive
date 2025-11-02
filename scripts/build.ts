@@ -13,7 +13,19 @@ try {
     try {
       // Skip .gitkeep
       if (file !== ".gitkeep") {
-        Bun.spawnSync(["rm", "-rf", fullPath]);
+        // Cross-platform file deletion
+        if (process.platform === "win32") {
+          // Windows: Use native Bun.fs or PowerShell
+          const stat = await Bun.file(fullPath).stat();
+          if (stat.isDirectory()) {
+            Bun.spawnSync(["cmd", "/c", "rmdir", "/s", "/q", fullPath]);
+          } else {
+            Bun.spawnSync(["cmd", "/c", "del", "/f", "/q", fullPath]);
+          }
+        } else {
+          // Unix: Use rm -rf
+          Bun.spawnSync(["rm", "-rf", fullPath]);
+        }
       }
     } catch (e) {
       // Ignore errors
@@ -172,11 +184,12 @@ exec "$DIR/${appName}-bin" "$@"
         
         await Bun.write(`${contentsPath}/Info.plist`, plist);
         
-        // Delete standalone binary (we only need the .app)
+        // Delete standalone binary and dylib (we only need the .app)
         try {
           Bun.spawnSync(["rm", outfile]);
+          Bun.spawnSync(["rm", libDest]); // Remove dylib from dist root
           console.log(`   ✅ ${appName}.app bundle created with icon`);
-          console.log(`   🗑️  Standalone binary removed (using .app only)`);
+          console.log(`   🗑️  Standalone binary and dylib removed (bundled in .app)`);
         } catch (e) {
           console.log(`   ✅ ${appName}.app bundle created with icon`);
         }
