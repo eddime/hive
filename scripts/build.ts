@@ -26,29 +26,17 @@ try {
 // Ensure dist directory exists
 await Bun.write(`${config.build.outdir}/.gitkeep`, "");
 
-// Check if game mode (skip frontend build if game exists)
-const gameDir = "./src/frontend/game";
-const hasGame = await Bun.file(`${gameDir}/index.html`).exists();
+// Build frontend first
+console.log("📦 Building frontend...");
+const frontendBuild = Bun.spawnSync(["bun", "run", "build:frontend"], {
+  stdout: "inherit",
+  stderr: "inherit",
+});
 
-if (!hasGame) {
-  // Build frontend first (only for normal apps)
-  console.log("📦 Building frontend...");
-  Bun.spawnSync(["bun", "run", "build:frontend"], {
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-} else {
-  console.log("🎮 Game mode detected - copying assets to dist...");
-  // Copy game files to dist (like Neutralino/Tauri)
-  Bun.spawnSync(["cp", "-r", gameDir, `${config.build.outdir}/game`], {
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  const gameFiles = await Array.fromAsync(new Bun.Glob("**/*").scan(`${config.build.outdir}/game`));
-  console.log(`   ✅ Copied ${gameFiles.length} game files`);
+if (frontendBuild.exitCode !== 0) {
+  console.error("❌ Frontend build failed!");
+  process.exit(1);
 }
-
-// Removed - now conditional
 
 console.log("\n🔨 Compiling binary...");
 

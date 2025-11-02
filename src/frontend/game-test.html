@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Game</title>
+  <style>
+    body { margin: 0; background: #1a1a2e; color: white; font-family: Arial; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    .game { text-align: center; }
+    h1 { font-size: 3em; margin: 0; }
+    button { padding: 20px 40px; font-size: 1.5em; margin: 20px; cursor: pointer; background: #0f3460; color: white; border: none; border-radius: 10px; }
+    button:hover { background: #16213e; }
+    #score { font-size: 4em; color: #e94560; margin: 20px; }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <h1>🎮 Test Game</h1>
+    <div id="score">0</div>
+    <button onclick="incrementScore()">Click Me!</button>
+    <p>This is a test game with external assets!</p>
+    <img src="test-image.png" onerror="this.style.display='none'" alt="Test Image">
+  </div>
+  <script>
+    let score = 0;
+    function incrementScore() {
+      score++;
+      document.getElementById('score').textContent = score;
+    }
+  </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import { Webview, SizeHint } from "webview-bun";
 import { htmlContent, htmlPath } from "./embedded-html";
 import config from "../hive.config";
 import { registerBindings } from "./backend/bindings";
+import { AssetServer } from "../lib/asset-server";
 
 // Main entry - optimized for speed
 async function main() {
@@ -24,75 +25,79 @@ async function main() {
     ? `setTimeout(()=>document.documentElement.requestFullscreen().catch(e=>console.warn('Fullscreen failed:',e)),100);document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`
     : `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
 
-  // Check if game directory exists
-  // Dev: src/frontend/game
-  // Prod macOS: ../../../game (relative to binary inside .app/Contents/MacOS/)
-  // Prod other: ./game (relative to binary)
-  
-  const devGameDir = "./src/frontend/game";
-  const prodGameDirMac = "../../../game"; // From .app/Contents/MacOS/ to dist/game
-  const prodGameDir = "./game";
-  
-  let gameDir = null;
-  if (await Bun.file(`${devGameDir}/index.html`).exists()) {
-    gameDir = devGameDir;
-    console.log("📂 Dev mode: using src/frontend/game");
-  } else if (await Bun.file(`${prodGameDirMac}/index.html`).exists()) {
-    gameDir = prodGameDirMac;
-    console.log("📂 Prod mode (macOS): using ../../../game");
-  } else if (await Bun.file(`${prodGameDir}/index.html`).exists()) {
-    gameDir = prodGameDir;
-    console.log("📂 Prod mode: using ./game");
-  }
+  // Register bindings
+  registerBindings(webview);
 
-  if (gameDir) {
-    // Game mode: Pure Bun.serve() + Bun.file() - like Neutralino/Tauri!
-    console.log(`🎮 Starting game server (${gameDir})...`);
+  // Check if asset server mode is enabled
+  if (htmlPath === "ASSET_SERVER") {
+    // Asset Server Mode: Serve all files via HTTP (no size limits!)
+    const server = new AssetServer();
     
-    const server = Bun.serve({
-      port: 0,
-      async fetch(req) {
-        const url = new URL(req.url);
-        let path = url.pathname === "/" ? "/index.html" : url.pathname;
-        
-        // Serve with Bun.file() - auto content-type!
-        const file = Bun.file(gameDir + path);
-        if (await file.exists()) {
-          return new Response(file);
-        }
-        
-        return new Response("Not Found", { status: 404 });
-      },
-    });
+    // Load assets from src/frontend directory
+    const assetDir = "./src/frontend";
+    const indexExists = await Bun.file(`${assetDir}/index.html`).exists();
     
-    registerBindings(webview);
-    
-    console.log(`🌐 Game at http://localhost:${server.port}`);
-    webview.navigate(`http://localhost:${server.port}`);
-    
-  } else {
-    // Normal app mode
-    if (!htmlContent) {
-      throw new Error("No HTML content found! Make sure to run 'bun run build:frontend' first.");
+    if (!indexExists) {
+      throw new Error("No index.html found in src/frontend/");
     }
     
-    registerBindings(webview);
+    await server.addDirectory(assetDir, "/");
+    await server.start(0);
+    
+    const serverURL = server.getURL();
+    
+    // Fetch HTML and inline all assets (NO HTTP requests from Webview!)
+    let html = await fetch(`${serverURL}/index.html`).then(r => r.text());
+    
+    // Find and inline all CSS files
+    const cssMatches = html.matchAll(/<link[^>]*href=["']([^"']+\.css)["'][^>]*>/gi);
+    for (const match of cssMatches) {
+      const cssPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
+      const cssContent = await fetch(`${serverURL}/${cssPath}`).then(r => r.text());
+      html = html.replace(match[0], `<style>${cssContent}</style>`);
+    }
+    
+    // Find and inline all JS/TS files (transpile TS to JS)
+    const jsMatches = html.matchAll(/<script[^>]*src=["']([^"']+\.(js|ts))["'][^>]*><\/script>/gi);
+    for (const match of jsMatches) {
+      const jsPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
+      let jsContent = await fetch(`${serverURL}/${jsPath}`).then(r => r.text());
+      
+      // Transpile TypeScript to JavaScript if needed
+      if (jsPath.endsWith('.ts')) {
+        const transpiled = await Bun.build({
+          entrypoints: [`./src/frontend/${jsPath}`],
+          target: 'browser',
+          format: 'esm',
+          minify: false,
+        });
+        
+        if (transpiled.success && transpiled.outputs.length > 0) {
+          jsContent = await transpiled.outputs[0].text();
+        }
+      }
+      
+      const moduleAttr = match[0].includes('type="module"') ? ' type="module"' : '';
+      html = html.replace(match[0], `<script${moduleAttr}>${jsContent}</script>`);
+    }
+    
+    console.log("✅ Inlined all CSS and JS assets");
+    
+    // Inject HTML (preserves bindings!)
+    webview.setHTML(html);
+    
+  } else {
+    // Fallback: Embedded mode (if asset server disabled)
+    if (!htmlContent) {
+      throw new Error("No HTML content found!");
+    }
 
     const finalHTML = htmlContent.replace(
       /<script>/,
       `<script>window.BUN_VERSION="${Bun.version}";${fullscreenScript}`
     );
 
-    // Load HTML based on mode
-    if (htmlPath === "EMBEDDED_SERVER") {
-      // External mode: Use Data URL to bypass size limits while keeping bindings!
-      const base64Html = btoa(finalHTML);
-      const dataUrl = `data:text/html;base64,${base64Html}`;
-      webview.navigate(dataUrl);
-    } else {
-      // Embedded mode: Direct HTML injection (< 2MB)
-      webview.setHTML(finalHTML);
-    }
+    webview.setHTML(finalHTML);
   }
 
   // Run webview (blocking - returns when window closes)

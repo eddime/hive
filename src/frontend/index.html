@@ -1,37 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Runner Game</title>
-	<style>
-		body {
-			margin: 0;
-			padding: 0;
-			background-color: #000000;
-            overflow: hidden;
-		}
-        #gameFrame {
-            width: 100vw;
-            height: 100vh;
-            border: none;
-        }
-	</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <iframe id="gameFrame" src="game/index.html"></iframe>
-    <script>
-        // F11 fullscreen support
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'F11') {
-                e.preventDefault();
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                } else {
-                    document.documentElement.requestFullscreen();
-                }
-            }
-        });
-    </script>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="icon">🐝</span>
+        <h1>Hive</h1>
+      </div>
+      <div class="meta">
+        <span class="tag">v<span id="version">1.0</span></span>
+        <span class="tag green">Bindings</span>
+      </div>
+    </header>
+
+    <!-- Counter -->
+    <main class="main">
+      <div class="counter-section">
+        <div class="label">Counter</div>
+        <div id="counter" class="counter">0</div>
+        <div class="sublabel">Direct Bindings • &lt;1ms</div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button onclick="decrement()" class="btn btn-secondary">
+          <span class="btn-icon">−</span>
+        </button>
+        <button onclick="increment()" class="btn btn-primary">
+          <span class="btn-icon">+</span>
+        </button>
+      </div>
+
+      <button onclick="reset()" class="btn btn-text">
+        <span class="btn-icon">↻</span>
+        Reset
+      </button>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="info">
+        <span class="dot"></span>
+        <span>Ready</span>
+      </div>
+      <div class="hint">Press F11 for fullscreen</div>
+    </footer>
+  </div>
+
+  <script type="module" src="app.ts"></script>
 </body>
 </html>
