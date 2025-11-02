@@ -26,17 +26,22 @@ try {
 // Ensure dist directory exists
 await Bun.write(`${config.build.outdir}/.gitkeep`, "");
 
-// Build frontend first
-console.log("📦 Building frontend...");
-const frontendBuild = Bun.spawnSync(["bun", "run", "build:frontend"], {
-  stdout: "inherit",
-  stderr: "inherit",
-});
+// Check if game mode (skip frontend build if game exists)
+const gameDir = "./src/frontend/game";
+const hasGame = await Bun.file(`${gameDir}/index.html`).exists();
 
-if (frontendBuild.exitCode !== 0) {
-  console.error("❌ Frontend build failed!");
-  process.exit(1);
+if (!hasGame) {
+  // Build frontend first (only for normal apps)
+  console.log("📦 Building frontend...");
+  Bun.spawnSync(["bun", "run", "build:frontend"], {
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+} else {
+  console.log("🎮 Game mode detected - skipping frontend build");
 }
+
+// Removed - now conditional
 
 console.log("\n🔨 Compiling binary...");
 

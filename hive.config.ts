@@ -4,8 +4,8 @@ const isDev = process.env.NODE_ENV !== "production";
 export default {
   // Window settings
   window: {
-    title: "Hive - Fullstack Desktop App",
-    width: 1200,
+    title: "Runner Game - Built with Hive",
+    width: 1280,
     height: 720,
     resizable: true,        // Allow window resizing
     fullscreen: false,      // F11 to toggle fullscreen
@@ -35,7 +35,7 @@ export default {
     
     // Frontend build mode
     frontend: {
-      mode: "embedded",  // "embedded" (<2MB, fast) or "external" (NO LIMIT, data URL)
+      mode: "external",  // "embedded" (<2MB, fast) or "external" (NO LIMIT, data URL)
     },
     
     // Platform-specific settings
