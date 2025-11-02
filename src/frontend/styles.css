@@ -1,9 +1,9 @@
 /* 🐝 Hive - Ultra Modern Minimalist Design */
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 :root {
@@ -22,7 +22,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+    min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,9 +85,9 @@ h1 {
 
 /* Main Counter */
 .main {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
 }
 
 .counter-section {
@@ -100,7 +100,7 @@ h1 {
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 .counter {
@@ -142,7 +142,7 @@ h1 {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
+    display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
@@ -185,7 +185,7 @@ h1 {
 
 .btn-secondary:hover {
   background: var(--border);
-  transform: translateY(-2px);
+    transform: translateY(-2px);
 }
 
 .btn-text {
@@ -203,9 +203,9 @@ h1 {
 
 /* Footer */
 .footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   padding-top: 2rem;
   border-top: 1px solid var(--border);
 }

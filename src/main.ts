@@ -6,8 +6,6 @@ import { Webview, SizeHint } from "webview-bun";
 import { htmlContent, htmlPath } from "./embedded-html";
 import config from "../hive.config";
 import { registerBindings } from "./backend/bindings";
-import { GameServer } from "../lib/game-server";
-import { existsSync } from "fs";
 
 // Main entry - optimized for speed
 async function main() {
@@ -27,23 +25,50 @@ async function main() {
     : `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
 
   // Check if game directory exists
-  const gameDir = "./src/frontend/game";
-  const hasGame = existsSync(gameDir);
+  // Dev: src/frontend/game
+  // Prod macOS: ../../../game (relative to binary inside .app/Contents/MacOS/)
+  // Prod other: ./game (relative to binary)
+  
+  const devGameDir = "./src/frontend/game";
+  const prodGameDirMac = "../../../game"; // From .app/Contents/MacOS/ to dist/game
+  const prodGameDir = "./game";
+  
+  let gameDir = null;
+  if (await Bun.file(`${devGameDir}/index.html`).exists()) {
+    gameDir = devGameDir;
+    console.log("📂 Dev mode: using src/frontend/game");
+  } else if (await Bun.file(`${prodGameDirMac}/index.html`).exists()) {
+    gameDir = prodGameDirMac;
+    console.log("📂 Prod mode (macOS): using ../../../game");
+  } else if (await Bun.file(`${prodGameDir}/index.html`).exists()) {
+    gameDir = prodGameDir;
+    console.log("📂 Prod mode: using ./game");
+  }
 
-  if (hasGame) {
-    // Game mode: Serve game via embedded HTTP server
-    console.log("🎮 Starting game server...");
-    const gameServer = new GameServer();
-    await gameServer.loadAssets(gameDir);
-    await gameServer.start(0);
+  if (gameDir) {
+    // Game mode: Pure Bun.serve() + Bun.file() - like Neutralino/Tauri!
+    console.log(`🎮 Starting game server (${gameDir})...`);
     
-    // Register bindings (even though game might not use them)
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url);
+        let path = url.pathname === "/" ? "/index.html" : url.pathname;
+        
+        // Serve with Bun.file() - auto content-type!
+        const file = Bun.file(gameDir + path);
+        if (await file.exists()) {
+          return new Response(file);
+        }
+        
+        return new Response("Not Found", { status: 404 });
+      },
+    });
+    
     registerBindings(webview);
     
-    console.log(`🌐 Game server running at ${gameServer.getURL()}`);
-    
-    // Navigate directly to game
-    webview.navigate(gameServer.getURL());
+    console.log(`🌐 Game at http://localhost:${server.port}`);
+    webview.navigate(`http://localhost:${server.port}`);
     
   } else {
     // Normal app mode

@@ -38,7 +38,14 @@ if (!hasGame) {
     stderr: "inherit",
   });
 } else {
-  console.log("🎮 Game mode detected - skipping frontend build");
+  console.log("🎮 Game mode detected - copying assets to dist...");
+  // Copy game files to dist (like Neutralino/Tauri)
+  Bun.spawnSync(["cp", "-r", gameDir, `${config.build.outdir}/game`], {
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  const gameFiles = await Array.fromAsync(new Bun.Glob("**/*").scan(`${config.build.outdir}/game`));
+  console.log(`   ✅ Copied ${gameFiles.length} game files`);
 }
 
 // Removed - now conditional
