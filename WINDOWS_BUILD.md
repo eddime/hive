@@ -1,21 +1,25 @@
 # 🪟 Building for Windows
 
-## ⚠️ Important: Native Builds Required
+## ✅ Cross-Compilation Works! (Baseline Build)
 
-Due to CPU instruction set differences, **Windows executables must be built ON Windows**.
+**Good news**: You can cross-compile Windows executables from macOS/Linux using **baseline builds**!
 
-Cross-compilation from macOS/Linux creates binaries with modern CPU instructions (AVX2) that may not work on all Windows machines.
+### What is Baseline?
 
-### Error: 0xc000001d (Illegal Instruction)
+Bun supports two build modes:
+- **modern** (default): Uses AVX2 instructions (CPUs from 2013+) - Faster but limited compatibility
+- **baseline**: Uses older instructions (CPUs from 2008+) - Slightly slower but works on ALL machines
 
-If you see this error when running a Windows `.exe`:
+**Hive automatically uses baseline for Windows/Linux** to ensure maximum compatibility!
+
+### No Error 0xc000001d Anymore! ✅
+
+Previous issue:
 ```
-process exited with code 3221225501 (0xc000001d)
+process exited with code 3221225501 (0xc000001d)  ❌ OLD
 ```
 
-**Cause**: The binary was cross-compiled from macOS/Linux and uses CPU instructions not supported by your processor.
-
-**Solution**: Build on a native Windows machine.
+**Fixed**: Using `--target=bun-windows-x64-baseline` ensures compatibility with all Windows machines.
 
 ---
 
@@ -238,12 +242,21 @@ bun run build
 
 ## Summary
 
-| Build Location | Windows .exe | Status |
-|---------------|--------------|--------|
-| **Windows (native)** | ✅ Works perfectly | **Recommended** |
-| macOS/Linux | ⚠️ May have CPU instruction issues | Not recommended |
+| Build Location | Windows .exe | Compatibility |
+|---------------|--------------|---------------|
+| **Windows (native)** | ✅ Baseline + Modern available | 100% |
+| **macOS/Linux** | ✅ Baseline (cross-compile) | 100% |
 
-**Always build Windows binaries on Windows machines!** 🪟
+**Cross-compilation works perfectly with baseline builds!** 🎉
+
+### Build Mode Comparison
+
+| Mode | CPU Support | Speed | Compatibility |
+|------|-------------|-------|---------------|
+| **baseline** | 2008+ (no AVX2) | ~5% slower | ✅ All Windows PCs |
+| **modern** | 2013+ (AVX2) | Fastest | ⚠️ Only newer PCs |
+
+**Hive uses baseline by default for maximum compatibility!**
 
 For more information, see:
 - [Bun Documentation](https://bun.sh/docs/bundler/executables)

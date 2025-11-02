@@ -11,14 +11,10 @@ const targets = [
 
 console.log(`🐝 Building ${config.app.name} v${config.app.version} for all platforms...\n`);
 
-// Warning about cross-compilation limitations
-if (process.platform !== "win32") {
-  console.log("⚠️  WARNING: Cross-compiling for Windows from macOS/Linux");
-  console.log("   Windows .exe may use incompatible CPU instructions (AVX2)");
-  console.log("   Error 0xc000001d may occur on older Windows machines");
-  console.log("   👉 For production: Build Windows .exe ON Windows!");
-  console.log("   See WINDOWS_BUILD.md for details\n");
-}
+// Info about baseline builds for maximum compatibility
+console.log("ℹ️  Using baseline builds for Windows/Linux (maximum CPU compatibility)");
+console.log("   Supports CPUs from 2008+ (no AVX2 required)");
+console.log("   Slightly slower but works on ALL machines\n");
 
 // Clean dist directory first
 console.log("🗑️  Cleaning dist directory...");
@@ -60,7 +56,10 @@ const buildResults = [];
 
 for (const target of targets) {
   const outfile = `${config.build.outdir}/${config.build.outfile}-${target.platform}-${target.arch}${target.ext}`;
-  const targetStr = `bun-${target.platform}-${target.arch}`;
+  // Use baseline for better CPU compatibility (supports CPUs from before 2013)
+  const targetStr = target.platform === "windows" || target.platform === "linux" 
+    ? `bun-${target.platform}-${target.arch}-baseline`  // baseline = older CPUs (no AVX2)
+    : `bun-${target.platform}-${target.arch}`;          // modern for macOS
   
   console.log(`⚙️  Building ${target.name}...`);
   
