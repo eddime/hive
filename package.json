@@ -7,13 +7,9 @@
   "license": "MIT",
   "keywords": ["bun", "webview", "desktop", "bunery", "bake", "tauri-alternative", "electron-alternative"],
   "scripts": {
+    "start": "bun run scripts/dev.ts",
     "dev": "bun run scripts/dev.ts",
-    "bake": "bun run scripts/build.ts",
-    "bake:all": "bun run scripts/build-all.ts",
-    "bake:frontend": "bun run scripts/build-frontend.ts",
-    "clean": "rm -rf dist src/embedded-html.ts",
-    "build": "bun run scripts/build.ts",
-    "build:all": "bun run scripts/build-all.ts"
+    "bake": "bun cli.ts"
   },
   "dependencies": {
     "webview-bun": "^2.4.0"
