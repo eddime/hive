@@ -41,6 +41,14 @@ async function main() {
 
   // Register bindings FIRST (before navigate!)
   registerBindings(webview);
+  
+  // Test binding to verify bindings work
+  if (config.window.debug) {
+    webview.bind("__test", (args: string) => {
+      console.log("🔧 Test binding called with:", args);
+      return JSON.stringify({ success: true, echo: args });
+    });
+  }
 
   // Wait for icon to finish loading
   const faviconBase64 = await iconPromise;
@@ -257,6 +265,8 @@ class AssetServer {
       html: "text/html",
       css: "text/css",
       js: "application/javascript",
+      ts: "application/javascript",     // TypeScript served as JavaScript
+      tsx: "application/javascript",    // TSX served as JavaScript
       json: "application/json",
       png: "image/png",
       jpg: "image/jpeg",
@@ -435,9 +445,38 @@ const server = new AssetServer();
       ${performanceScript}
     `.trim();
     
+    // Test bindings in debug mode
+    const bindingTestScript = config.window.debug ? `
+      <script>
+        // Test if bindings are available
+        window.addEventListener('DOMContentLoaded', () => {
+          console.log('🔍 Testing bindings...');
+          console.log('📦 Window object keys:', Object.keys(window).filter(k => k.startsWith('__')));
+          
+          // Test if __test binding exists
+          if (typeof window.__test === 'function') {
+            window.__test('hello').then(result => {
+              console.log('✅ Test binding works!', result);
+            }).catch(err => {
+              console.error('❌ Test binding failed:', err);
+            });
+          } else {
+            console.error('❌ __test binding not found!');
+          }
+          
+          // Test counter bindings
+          if (typeof window.__getCounter === 'function') {
+            console.log('✅ __getCounter found');
+          } else {
+            console.error('❌ __getCounter not found!');
+          }
+        });
+      </script>
+    ` : '';
+    
     const htmlWithBase = html.replace(
       /<head>/i,
-      `<head><base href="${baseURL}">${faviconTag}${performanceTags}`
+      `<head><base href="${baseURL}">${faviconTag}${performanceTags}${bindingTestScript}`
     );
     
     if (config.window.debug) {
