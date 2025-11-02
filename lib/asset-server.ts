@@ -70,7 +70,8 @@ export class AssetServer {
       port: preferredPort,
       fetch: (req) => {
         const url = new URL(req.url);
-        let path = url.pathname;
+        // Decode URL to handle filenames with spaces, special chars, etc.
+        let path = decodeURIComponent(url.pathname);
 
         // Default to index.html for root
         if (path === "/" || path === "") {

@@ -36,7 +36,7 @@ async function main() {
 
   // Register bindings FIRST (before navigate!)
   registerBindings(webview);
-  
+
   // Build fullscreen script (F11 toggle only, no auto-fullscreen due to browser restrictions)
   const fullscreenScript = `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
 
@@ -125,7 +125,7 @@ const server = new AssetServer();
       /<\/head>/i,
       `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}";</script></head>`
     );
-    
+
     // Use setHTML - bindings work!
     webview.setHTML(finalHTML);
     
@@ -148,14 +148,14 @@ const server = new AssetServer();
       `<head>${faviconTag}`
     );
     finalHTML = finalHTML.replace(
-      /<script>/,
-      `<script>window.BUN_VERSION="${Bun.version}";${fullscreenScript}`
-    );
+    /<script>/,
+    `<script>window.BUN_VERSION="${Bun.version}";${fullscreenScript}`
+  );
 
-    webview.setHTML(finalHTML);
+  webview.setHTML(finalHTML);
     
     // Run webview (blocking - returns when window closes)
-    webview.run();
+  webview.run();
   }
 
   // webview.run() blocks until window is closed
