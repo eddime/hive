@@ -18,37 +18,22 @@ bun bake win
 ✅ Icon is automatically embedded  
 ✅ Uses `--windows-icon=assets/icon.ico`
 
-### Option 2: rcedit (Automatic - Recommended for Cross-Platform)
+### Option 2: Post-Build Icon Injection (Cross-Platform)
 
-Install `rcedit` once, then Bunery applies icons automatically:
+Use `rcedit` to add icon after building:
 
 ```bash
-# Option A: Global installation (recommended)
+# Install rcedit (on macOS/Linux)
 npm install -g rcedit
 
-# Option B: Local installation (alternative)
-npm install --save-dev rcedit
-# or
-bun add -d rcedit
-
-# Then build - icon is auto-applied!
-bun bake win
-bun bake all
-```
-
-### Option 3: Manual rcedit (Without Auto-Detection)
-
-Apply icon manually after building:
-
-```bash
 # Build without icon
 bun bake win
 
 # Add icon manually
-npx rcedit dist/bunery-windows-x64.exe --set-icon assets/icon.ico
+rcedit dist/bunery-windows-x64.exe --set-icon assets/icon.ico
 ```
 
-### Option 4: GitHub Actions (Automated)
+### Option 3: GitHub Actions (Automated)
 
 ```yaml
 # .github/workflows/build-windows.yml
@@ -120,17 +105,6 @@ But this requires `rcedit` to be installed globally.
 ## 📝 Current Status
 
 ✅ Icon works when building on Windows  
-🔧 **Auto-rcedit**: Bunery automatically applies icons via `rcedit` when cross-compiling!  
-💡 Install `rcedit` once: `npm install -g rcedit` (or use CI on Windows)
-
-### Auto-Icon Workflow
-
-When you run `bun bake win` or `bun bake all` on macOS/Linux:
-
-1. ✅ Bun builds the `.exe` (without icon due to API limitation)
-2. 🔍 Bunery checks if `rcedit` is installed
-3. 🎨 If found: Automatically applies icon with `rcedit`
-4. 🎉 Result: `.exe` with correct icon!
-
-No manual steps needed!
+❌ Icon doesn't work when cross-compiling  
+💡 Use one of the solutions above  
 

@@ -256,54 +256,6 @@ exec "$DIR/${appName}-bin" "$@"
     }
   }
   
-  // Auto-apply icon with rcedit if cross-compiling to Windows (macOS/Linux → Windows)
-  const isWindowsBuild = outfile.endsWith(".exe");
-  if (isWindowsBuild && process.platform !== "win32" && config.build.windows?.icon) {
-    console.log(`\n🎨 Applying icon with rcedit...`);
-    
-    // Try to find rcedit (global or local)
-    let rceditCmd = "rcedit";
-    
-    // Check global rcedit first
-    const globalCheck = Bun.spawnSync(["which", "rcedit"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    
-    // If not global, try local node_modules
-    if (globalCheck.exitCode !== 0) {
-      const localRcedit = "node_modules/.bin/rcedit";
-      const localFile = Bun.file(localRcedit);
-      if (await localFile.exists()) {
-        rceditCmd = localRcedit;
-      } else {
-        console.log(`   💡 rcedit not found - install with:`);
-        console.log(`      npm install -g rcedit  (global)`);
-        console.log(`      npm install --save-dev rcedit  (local)`);
-        console.log(`   ℹ️  Or build on Windows for automatic icon embedding`);
-        rceditCmd = null;
-      }
-    }
-    
-    if (rceditCmd) {
-      const rceditResult = Bun.spawnSync([
-        rceditCmd,
-        outfile,
-        "--set-icon",
-        config.build.windows.icon
-      ], {
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      
-      if (rceditResult.exitCode === 0) {
-        console.log(`   ✅ Icon applied successfully`);
-      } else {
-        console.warn(`   ⚠️  rcedit failed: ${rceditResult.stderr.toString()}`);
-      }
-    }
-  }
-  
   console.log(`\n✅ Build successful in ${buildTime}s!`);
   if (process.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
     console.log(`   📦 ${config.build.outdir}/${config.app.name}.app`);

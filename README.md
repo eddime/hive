@@ -127,24 +127,6 @@ bun bake clean        # Clean build artifacts
 bun bake help         # Show all commands
 ```
 
-### Windows Icon (Cross-Compilation)
-
-When building Windows `.exe` from macOS/Linux, install `rcedit` for automatic icon embedding:
-
-```bash
-# Option 1: Global installation (recommended)
-npm install -g rcedit
-
-# Option 2: Local installation (per-project)
-npm install --save-dev rcedit
-# or
-bun add -d rcedit
-```
-
-Bunery automatically detects and uses `rcedit` (global or local) during `bun bake win` or `bun bake all`.
-
-**Note:** Building on Windows embeds icons natively (no `rcedit` needed).
-
 ## Output
 
 ```

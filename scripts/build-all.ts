@@ -238,53 +238,6 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
       } catch (e) {
         console.warn(`   ⚠️  Failed to copy libwebview.dll:`, e);
       }
-      
-      // Auto-apply icon with rcedit if cross-compiling (macOS/Linux → Windows)
-      if (process.platform !== "win32" && config.build.windows?.icon) {
-        console.log(`   🎨 Applying icon with rcedit...`);
-        
-        // Try to find rcedit (global or local)
-        let rceditCmd = "rcedit";
-        
-        // Check global rcedit first
-        const globalCheck = Bun.spawnSync(["which", "rcedit"], {
-          stdout: "pipe",
-          stderr: "pipe",
-        });
-        
-        // If not global, try local node_modules
-        if (globalCheck.exitCode !== 0) {
-          const localRcedit = "node_modules/.bin/rcedit";
-          const localFile = Bun.file(localRcedit);
-          if (await localFile.exists()) {
-            rceditCmd = localRcedit;
-          } else {
-            console.log(`   💡 rcedit not found - install with:`);
-            console.log(`      npm install -g rcedit  (global)`);
-            console.log(`      npm install --save-dev rcedit  (local)`);
-            console.log(`   ℹ️  Or build on Windows for automatic icon embedding`);
-            rceditCmd = null;
-          }
-        }
-        
-        if (rceditCmd) {
-          const rceditResult = Bun.spawnSync([
-            rceditCmd,
-            outfile,
-            "--set-icon",
-            config.build.windows.icon
-          ], {
-            stdout: "pipe",
-            stderr: "pipe",
-          });
-          
-          if (rceditResult.exitCode === 0) {
-            console.log(`   ✅ Icon applied successfully`);
-          } else {
-            console.warn(`   ⚠️  rcedit failed: ${rceditResult.stderr.toString()}`);
-          }
-        }
-      }
     } else if (target.platform === "linux") {
       const libName = `libwebview-${target.arch}.so`;
       const libSource = `node_modules/webview-bun/build/${libName}`;
