@@ -5,30 +5,45 @@ const useAssetServer = config.build?.frontend?.assetServer !== false; // Default
 console.log(`📦 Building frontend (${useAssetServer ? "asset server" : "embedded"} mode)...`);
 
 if (useAssetServer) {
-  // Asset Server mode: Just use source files directly!
-  // Bun will handle transpilation when bundling the binary
+  // Asset Server mode: Embed file CONTENTS as inline strings
+  // This works in both dev and compiled executables
   const glob = new Bun.Glob("**/*");
   const files = await Array.fromAsync(glob.scan({ cwd: "./src/frontend", onlyFiles: true }));
   
-  // Generate import statements for source files
-  const imports = files
-    .map((file, idx) => `import asset${idx} from "../src/frontend/${file}" with { type: "file" };`)
-    .join("\n");
+  // Read all files and embed their contents as base64 or text
+  const assetsCode = [];
+  const transpiler = new Bun.Transpiler({ loader: 'tsx' });
   
-  // Generate assets map
-  const assetsMap = files
-    .map((file, idx) => `  "/${file}": asset${idx}`)
-    .join(",\n");
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const filePath = `./src/frontend/${file}`;
+    let fileContent: ArrayBuffer;
+    
+    // Transpile TypeScript files to JavaScript
+    if (file.endsWith('.ts') || file.endsWith('.tsx')) {
+      const sourceCode = await Bun.file(filePath).text();
+      const jsCode = await transpiler.transform(sourceCode);
+      fileContent = new TextEncoder().encode(jsCode).buffer;
+      console.log(`   📝 Transpiled: ${file} → JavaScript`);
+    } else {
+      fileContent = await Bun.file(filePath).arrayBuffer();
+    }
+    
+    const base64 = Buffer.from(fileContent).toString('base64');
+    
+    // Store as base64 and decode at runtime
+    assetsCode.push(`  "/${file}": "data:base64,${base64}"`);
+  }
   
   const embeddedHtmlTs = `// Auto-generated - Asset Server mode
-${imports}
+// Assets embedded as base64 data URLs (TypeScript files pre-transpiled)
 
 export const htmlContent = null;
 export const htmlPath = "ASSET_SERVER";
 
-// Embedded assets (bundled in binary)
+// Embedded assets (bundled in binary as base64)
 export const embeddedAssets: Record<string, string> = {
-${assetsMap}
+${assetsCode.join(',\n')}
 };
 `;
   await Bun.write("./src/embedded-html.ts", embeddedHtmlTs);

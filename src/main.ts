@@ -294,9 +294,21 @@ const server = new AssetServer();
   for (let i = 0; i < assetEntries.length; i += BATCH_SIZE) {
     const batch = assetEntries.slice(i, i + BATCH_SIZE);
     await Promise.all(
-      batch.map(([path, filePath]) => 
-        server.addAsset(path as string, filePath as string)
-      )
+      batch.map(([path, dataUrl]) => {
+        // Decode base64 data URL: "data:base64,<base64string>"
+        if (typeof dataUrl === 'string' && dataUrl.startsWith('data:base64,')) {
+          const base64Data = dataUrl.substring('data:base64,'.length);
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          return server.addAsset(path as string, bytes);
+        } else {
+          // Legacy: file path (for dev mode)
+          return server.addAsset(path as string, dataUrl as string);
+        }
+      })
     );
   }
   
