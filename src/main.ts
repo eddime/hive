@@ -48,6 +48,11 @@ async function main() {
       console.log("🔧 Test binding called with:", args);
       return JSON.stringify({ success: true, echo: args });
     });
+    
+    // Log binding registration
+    console.log("✅ Bindings registered!");
+    console.log(`📍 Binary path: ${process.execPath}`);
+    console.log(`📍 CWD: ${process.cwd()}`);
   }
 
   // Wait for icon to finish loading
@@ -451,7 +456,15 @@ const server = new AssetServer();
         // Test if bindings are available
         window.addEventListener('DOMContentLoaded', () => {
           console.log('🔍 Testing bindings...');
-          console.log('📦 Window object keys:', Object.keys(window).filter(k => k.startsWith('__')));
+          const bindings = Object.keys(window).filter(k => k.startsWith('__'));
+          console.log('📦 Window object keys:', bindings);
+          
+          // Visual feedback if no bindings found!
+          if (bindings.length === 0) {
+            document.body.innerHTML = '<div style="color: red; font-size: 2em; text-align: center; padding: 50px;">❌ NO BINDINGS FOUND!<br>Check console for details.</div>';
+            console.error('FATAL: No bindings registered!');
+            return;
+          }
           
           // Test if __test binding exists
           if (typeof window.__test === 'function') {
@@ -459,9 +472,11 @@ const server = new AssetServer();
               console.log('✅ Test binding works!', result);
             }).catch(err => {
               console.error('❌ Test binding failed:', err);
+              alert('Test binding failed: ' + err.message);
             });
           } else {
             console.error('❌ __test binding not found!');
+            alert('❌ __test binding not found!');
           }
           
           // Test counter bindings
@@ -469,6 +484,7 @@ const server = new AssetServer();
             console.log('✅ __getCounter found');
           } else {
             console.error('❌ __getCounter not found!');
+            alert('❌ __getCounter binding not found!');
           }
         });
       </script>
