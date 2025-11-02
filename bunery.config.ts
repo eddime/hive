@@ -1,10 +1,10 @@
-// 🐝 Hive Configuration
+// 🥐 Bunery Configuration
 const isDev = process.env.NODE_ENV !== "production";
 
 export default {
   // Window settings
   window: {
-    title: "Candy Catch - Hive",
+    title: "Bunery",
     width: 1280,
     height: 720,
     resizable: true,        // Allow window resizing
@@ -20,9 +20,9 @@ export default {
 
   // App metadata
   app: {
-    name: "hive",
+    name: "bunery",
     version: "1.0.0",
-    description: "A lightweight fullstack desktop framework with Bun + Webview",
+    description: "Bake your desktop apps with Bun + Webview",
   },
 
   // Build settings
@@ -32,7 +32,7 @@ export default {
     bytecode: false,    // Disabled (webview-bun uses top-level await)
     strip: true,        // Strip debug symbols (smaller binary, ~30% size reduction)
     outdir: "dist",     // Output directory
-    outfile: "hive",    // Executable name
+    outfile: "bunery",  // Executable name
     
     // Frontend build mode
     frontend: {

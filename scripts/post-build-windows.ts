@@ -1,5 +1,5 @@
 // Post-build script for Windows: Create launcher that sets DLL path
-import config from "../hive.config";
+import config from "../bunery.config";
 
 console.log("🪟 Creating Windows launcher with DLL path...");
 

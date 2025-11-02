@@ -1,9 +1,9 @@
-// 🐝 Hive Development Script with File Watching
+// 🥐 Bunery Development Script with File Watching
 import { watch } from "fs";
 import { spawn } from "bun";
-import config from "../hive.config";
+import config from "../bunery.config";
 
-console.log(`🐝 Starting ${config.app.name} in development mode...`);
+console.log(`🥐 Starting ${config.app.name} in development mode...`);
 console.log(`🔥 Hot Reload: ${config.dev.hmr ? "ENABLED" : "DISABLED"}\n`);
 
 let appProcess: ReturnType<typeof spawn> | null = null;

@@ -1,4 +1,4 @@
-# 🚀 Getting Started with Hive
+# 🚀 Getting Started with Bunery
 
 ## Quick Start
 
@@ -10,7 +10,7 @@ bun install
 bun run dev
 
 # 3. Build for production
-bun run build
+bun run bake
 ```
 
 Your app is now running! 🎉
@@ -18,7 +18,7 @@ Your app is now running! 🎉
 ## Project Structure
 
 ```
-hive/
+bunery/
 ├── src/
 │   ├── frontend/          # 🎨 Your UI Code
 │   │   ├── index.html     # HTML structure
@@ -29,12 +29,12 @@ hive/
 │   │   └── bindings.ts    # Frontend ↔ Backend communication
 │   └── index.ts           # Main entry point (don't edit)
 ├── scripts/               # Build scripts (don't edit)
-└── hive.config.ts         # 🔧 App configuration
+└── bunery.config.ts         # 🔧 App configuration
 ```
 
 ## Building Your App
 
-### 1. Configure Your App (`hive.config.ts`)
+### 1. Configure Your App (`bunery.config.ts`)
 
 ```typescript
 export default {
@@ -156,17 +156,17 @@ if (import.meta.hot) {
 
 ```bash
 # Single platform (current OS)
-bun run build
-# Output: dist/hive or dist/hive.exe
+bun run bake
+# Output: dist/bunery or dist/bunery.exe
 
 # All platforms
-bun run build:all
+bun run bake:all
 # Output:
-#   dist/hive-darwin-arm64
-#   dist/hive-darwin-x64
-#   dist/hive-linux-x64
-#   dist/hive-linux-arm64
-#   dist/hive-windows-x64.exe
+#   dist/bunery-darwin-arm64
+#   dist/bunery-darwin-x64
+#   dist/bunery-linux-x64
+#   dist/bunery-linux-arm64
+#   dist/bunery-windows-x64.exe
 ```
 
 ## Example: Todo App
@@ -179,5 +179,5 @@ Check out the included user management example to see how everything works toget
 - Read the code comments in `src/`
 - Review the example user management implementation
 
-Happy coding! 🐝
+Happy coding! 🥐
 

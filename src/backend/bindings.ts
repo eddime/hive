@@ -1,4 +1,4 @@
-// 🐝 Hive Bindings - Frontend ↔ Backend Communication
+// 🥐 Bunery Bindings - Frontend ↔ Backend Communication
 // 👉 REGISTER YOUR BACKEND FUNCTIONS HERE
 
 import type { Webview } from "webview-bun";

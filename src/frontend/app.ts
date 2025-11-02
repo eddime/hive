@@ -1,4 +1,4 @@
-// 🐝 Hive Frontend - Modern, Minimal, Fast
+// 🥐 Bunery Frontend - Modern, Minimal, Fast
 
 // Type-safe API wrapper (inlined for single-file build)
 interface BindingResult<T> {

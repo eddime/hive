@@ -1,4 +1,4 @@
-// 🐝 Hive Asset Server - Virtual File System for Games/Large Apps
+// 🥐 Bunery Asset Server - Virtual File System for Games/Large Apps
 // Serves embedded assets via HTTP (like Tauri/Neutralino)
 
 export class AssetServer {

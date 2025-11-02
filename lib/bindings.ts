@@ -1,4 +1,4 @@
-// 🐝 Hive Core Bindings System
+// 🥐 Bunery Core Bindings System
 // Clean, type-safe binding system for Frontend ↔ Backend communication
 
 import type { Webview } from "webview-bun";

@@ -1,10 +1,10 @@
-# 🐝 Hive
+# 🥐 Bunery
 
-**A lean, fast desktop framework powered by Bun + Webview**
+**Bake your desktop apps with Bun + Webview**
 
 Like Tauri/Electron/Neutralino - but simpler and with direct bindings (\<1ms).
 
-## Why Hive?
+## Why Bunery?
 
 - ✅ **Lean** - 4 KB frontend, ~58 MB binary
 - ✅ **Fast** - Direct bindings (no HTTP overhead)
@@ -22,18 +22,18 @@ bun install
 # Develop with hot reload
 bun run dev
 
-# Build for your platform
-bun run build
+# Bake for your platform
+bun run bake
 
-# Build for all platforms
-bun run build:all
+# Bake for all platforms
+bun run bake:all
 ```
 
 ## Project Structure
 
 ```
-hive/
-├── hive.config.ts       # ⚙️  Configure your app
+bunery/
+├── bunery.config.ts     # ⚙️  Configure your app
 ├── src/
 │   ├── frontend/        # 🎨 Your UI
 │   │   ├── index.html
@@ -50,150 +50,159 @@ hive/
 
 ```typescript
 // src/backend/server.ts
-export function getData() {
-  return { message: "Hello from backend!" };
-}
+let counter = 0;
+
+export const getCounter = () => counter;
+export const incrementCounter = () => ++counter;
 ```
 
 ### 2. Register Bindings
 
 ```typescript
 // src/backend/bindings.ts
-webview.bind("__getData", () => {
-  const data = backend.getData();
-  return JSON.stringify(data);
-});
+import { registerBindings } from "../../lib/bindings";
+import * as backend from "./server";
+
+export function registerBindings(webview: Webview) {
+  register(webview, {
+    getCounter: () => ({ value: backend.getCounter() }),
+    increment: () => ({ value: backend.incrementCounter() }),
+  });
+}
 ```
 
 ### 3. Call from Frontend
 
 ```typescript
 // src/frontend/app.ts
-const resultStr = await window.__getData();
-const data = JSON.parse(resultStr);
-console.log(data); // { message: "Hello from backend!" }
+async function callBinding(binding: string, args?: any) {
+  const fn = (window as any)[`__${binding}`];
+  const result = await fn(args ? JSON.stringify(args) : undefined);
+  return JSON.parse(result);
+}
+
+const { value } = await callBinding('increment');
+console.log(value); // 1
 ```
-
-**That's it!** No HTTP servers, no REST APIs, no complex IPC. Just direct function calls.
-
-## Use Cases
-
-### Perfect For:
-- ✅ Desktop tools & utilities
-- ✅ Admin panels & dashboards
-- ✅ Data visualization apps
-- ✅ Local-first applications
-- ✅ Developer tools
-- ✅ **Games** (see below)
-
-### Games with Hive?
-
-**Yes! Hive can be used for games.** Here's how:
-
-#### Canvas/WebGL Games
-- Use HTML5 Canvas or WebGL for rendering
-- Backend handles game logic, state, saves
-- Direct bindings = fast game loop communication
-- Perfect for 2D games, puzzle games, strategy games
-
-#### Example Use Cases:
-- 🎮 Roguelikes, RPGs, puzzle games
-- 🎲 Board game implementations
-- 🎯 2D platformers, arcade games
-- 🃏 Card games, turn-based strategy
-
-#### Performance:
-- **Bindings: <1ms** - Fast enough for game loops
-- **Webview rendering** - Hardware accelerated
-- **Bun backend** - Native performance for game logic
-
-#### Steamworks Integration?
-**Yes!** You can use Bun + native addons:
-- Use FFI to call Steamworks C++ API
-- Or use a Bun-compatible Steam library
-- Backend handles all Steam API calls
-- Frontend just renders and sends input
-
-Example structure:
-```typescript
-// Backend integrates with Steam via FFI
-export function initSteam() { /* FFI call */ }
-export function unlockAchievement(id: string) { /* FFI call */ }
-
-// Frontend just calls backend
-await window.__initSteam();
-await window.__unlockAchievement("first_win");
-```
-
-#### Limitations:
-- Not ideal for AAA 3D games (use Unity/Unreal)
-- Webview rendering = limited to web tech
-- No native gamepad API (needs workaround)
-
-But for **indie games, retro games, or casual games** - Hive is perfect!
 
 ## Configuration
 
 ```typescript
-// hive.config.ts
+// bunery.config.ts
 export default {
   window: {
     title: "My App",
-    width: 1200,
-    height: 800,
-    resizable: true,
-    fullscreen: false,  // Games can use this!
-    debug: true,
+    width: 1280,
+    height: 720,
   },
-  dev: {
-    hmr: true,  // Hot reload
+  app: {
+    name: "my-app",
+    version: "1.0.0",
   },
   build: {
-    minify: true,
-    outdir: "dist",
-    outfile: "my-app",
+    frontend: {
+      assetServer: true,  // Embed assets, serve via HTTP
+    },
   },
 };
 ```
 
-## Commands
+## Build Options
 
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start with hot reload |
-| `bun run build` | Build for current platform |
-| `bun run build:all` | Build for all platforms |
-| `bun run clean` | Clean build artifacts |
+```bash
+# Development
+bun run dev           # Hot reload
+
+# Production
+bun run bake          # Current platform
+bun run bake:all      # All platforms (macOS, Linux, Windows)
+
+# Aliases (backwards compatible)
+bun run bake
+bun run bake:all
+```
+
+## Output
+
+```
+dist/
+├── bunery-darwin-x64.app     # macOS Intel
+├── bunery-darwin-arm64.app   # macOS ARM (M1/M2/M3)
+├── bunery-linux-x64          # Linux x64
+├── bunery-linux-arm64        # Linux ARM
+└── bunery-windows-x64.exe    # Windows
+```
+
+## Features
+
+### 🚀 Asset Server Mode
+- Embed unlimited frontend assets in binary
+- Serve via HTTP at runtime (fast!)
+- No size limits (unlike inline mode)
+- TypeScript auto-transpilation
+
+### 🔥 Direct Bindings
+- \<1ms response time
+- Type-safe communication
+- No HTTP/WebSocket overhead
+- Synchronous or async
+
+### 🎨 Framework Agnostic
+- Vanilla JS/TS
+- React, Vue, Svelte
+- Phaser, Three.js
+- Any frontend framework!
+
+### 📦 Small Binaries
+- ~58 MB on macOS
+- ~100 MB on Linux/Windows
+- Native webview (no Chromium)
+- Baseline builds (max compatibility)
+
+## Platform Support
+
+| Platform | Status | Binary Size | Notes |
+|----------|--------|-------------|-------|
+| macOS Intel | ✅ | ~64 MB | .app bundle |
+| macOS ARM | ✅ | ~58 MB | M1/M2/M3 |
+| Linux x64 | ✅ | ~100 MB | Baseline build |
+| Linux ARM64 | ✅ | ~93 MB | Baseline build |
+| Windows x64 | ✅ | ~114 MB | Baseline build |
 
 ## Comparison
 
-| Feature | Hive | Tauri | Electron | Neutralino |
-|---------|------|-------|----------|------------|
-| Runtime | Bun | Rust | Node | C++ |
-| Size | 58MB | 5MB | 150MB | 3MB |
-| Setup | ⚡⚡⚡ | ⚡⚡ | ⚡⚡⚡ | ⚡⚡ |
-| Speed | ⚡⚡⚡ | ⚡⚡⚡ | ⚡⚡ | ⚡⚡⚡ |
+| Feature | Bunery | Tauri | Electron | Neutralino |
+|---------|--------|-------|----------|------------|
+| Runtime | Bun | Rust | Node | Native |
+| Webview | Native | Native | Chromium | Native |
+| Binary Size | ~58 MB | ~10 MB | ~120 MB | ~5 MB |
+| Startup | Fast | Fast | Slow | Fast |
+| Bindings | Direct | IPC | IPC | IPC |
 | Hot Reload | ✅ | ✅ | ✅ | ❌ |
-| Bindings | <1ms | ~5ms | IPC | WebSocket |
+| TypeScript | Native | External | External | External |
 
-## Architecture
+## Examples
 
-```
-Frontend (HTML/CSS/JS)
-       ↕ <1ms
-Webview Bindings
-       ↕
-Backend (Bun/TypeScript)
-       ↕
-System/APIs/Steam/etc
-```
+Check out `src/frontend/` for:
+- Counter app (bindings demo)
+- Candy Catch game (Phaser + asset server)
+
+## Documentation
+
+- [Getting Started](GETTING_STARTED.md) - Full tutorial
+- [Configuration](bunery.config.ts) - All options
+- [Bindings Guide](lib/bindings.ts) - Frontend ↔ Backend
 
 ## License
 
 MIT
 
+## Acknowledgments
+
+Built with:
+- [Bun](https://bun.sh) - Fast JavaScript runtime
+- [webview-bun](https://github.com/tr1ckydev/webview-bun) - Native webview bindings
+
 ---
 
-**Made with 🐝 and Bun**
-
-*For more details, see [GETTING_STARTED.md](GETTING_STARTED.md) and [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)*
+**🥐 Bake something awesome!**

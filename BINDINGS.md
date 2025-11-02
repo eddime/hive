@@ -1,4 +1,4 @@
-# 🔗 Hive Bindings System
+# 🔗 Bunery Bindings System
 
 Ultra-fast, type-safe communication between Frontend ↔ Backend.
 
@@ -137,7 +137,7 @@ const result = await window.__getCounter();
 const { value } = JSON.parse(result);
 ```
 
-### New Way (Hive System)
+### New Way (Bunery System)
 ```typescript
 // Backend
 register(webview, {
@@ -196,7 +196,7 @@ register(webview, {
 ### Fullscreen Support
 
 ```typescript
-// hive.config.ts
+// bunery.config.ts
 export default {
   window: {
     startFullscreen: true,  // Start in fullscreen
@@ -322,5 +322,5 @@ const { data } = await api.getData();
 
 ---
 
-**Made with 🐝 and Bun**
+**Made with 🥐 and Bun**
 

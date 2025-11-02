@@ -30,7 +30,7 @@ Copy the **full identity string** in quotes.
 
 ### 1. Enable Code Signing
 
-Edit `hive.config.ts`:
+Edit `bunery.config.ts`:
 
 ```typescript
 macos: {
@@ -73,10 +73,10 @@ The `entitlements.plist` file is already created with JIT permissions for Bun:
 
 ```bash
 # Single platform build
-bun run build
+bun run bake
 
 # All platforms (macOS apps will be signed)
-bun run build:all
+bun run bake:all
 ```
 
 Build output:
@@ -86,26 +86,26 @@ Build output:
    📜 Using entitlements: entitlements.plist
    ✅ Code signing successful
    ✅ Signature verified
-   ✅ hive.app bundle created with icon
+   ✅ bunery.app bundle created with icon
 ```
 
 ## Verify Signature
 
 ```bash
 # Verify the signature
-codesign -vvv --verify dist/hive.app
+codesign -vvv --verify dist/bunery.app
 
 # Check entitlements
-codesign -d --entitlements - dist/hive.app
+codesign -d --entitlements - dist/bunery.app
 
 # Check certificate info
-codesign -dvv dist/hive.app
+codesign -dvv dist/bunery.app
 ```
 
 Expected output:
 ```
-dist/hive.app: valid on disk
-dist/hive.app: satisfies its Designated Requirement
+dist/bunery.app: valid on disk
+dist/bunery.app: satisfies its Designated Requirement
 ```
 
 ## Notarization (Optional, Recommended)
@@ -114,20 +114,20 @@ For distribution outside the App Store, you should also **notarize** your app:
 
 ```bash
 # 1. Create a ZIP of your app
-ditto -c -k --keepParent dist/hive.app hive.zip
+ditto -c -k --keepParent dist/bunery.app bunery.zip
 
 # 2. Upload for notarization
-xcrun notarytool submit hive.zip \
+xcrun notarytool submit bunery.zip \
   --apple-id "your-email@example.com" \
   --team-id "TEAMID123" \
   --password "app-specific-password" \
   --wait
 
 # 3. Staple the ticket to your app
-xcrun stapler staple dist/hive.app
+xcrun stapler staple dist/bunery.app
 
 # 4. Verify notarization
-xcrun stapler validate dist/hive.app
+xcrun stapler validate dist/bunery.app
 ```
 
 ### App-Specific Password
@@ -152,7 +152,7 @@ security find-identity -v
 
 ```bash
 # Clean extended attributes
-xattr -cr dist/hive.app
+xattr -cr dist/bunery.app
 ```
 
 ### "Code signing failed"
@@ -167,7 +167,7 @@ security find-certificate -c "Developer ID Application" -p | openssl x509 -text
 To test the build process without signing (for development):
 
 ```typescript
-// hive.config.ts
+// bunery.config.ts
 codesign: {
   enabled: false,  // ← Disable signing
 }
@@ -189,7 +189,7 @@ security import certificate.p12 -P $CERT_PASSWORD
 ## References
 
 - [Bun Code Signing Docs](https://bun.sh/docs/bundler/executables#code-signing-on-macos)
-- [Apple Code Signing Guide](https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Introduction/Introduction.html)
+- [Apple Code Signing Guide](https://developer.apple.com/library/arcbunery/documentation/Security/Conceptual/CodeSigningGuide/Introduction/Introduction.html)
 - [Notarization Guide](https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution)
 
 ## Summary

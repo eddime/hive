@@ -1,5 +1,5 @@
 // Build frontend - Asset Server or Embedded
-import config from "../hive.config";
+import config from "../bunery.config";
 
 const useAssetServer = config.build?.frontend?.assetServer !== false; // Default: true
 console.log(`📦 Building frontend (${useAssetServer ? "asset server" : "embedded"} mode)...`);

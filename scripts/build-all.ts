@@ -1,5 +1,5 @@
-// 🐝 Hive Cross-Platform Build Script
-import config from "../hive.config";
+// 🥐 Bunery Cross-Platform Build Script
+import config from "../bunery.config";
 
 const targets = [
   { platform: "darwin", arch: "x64", ext: "", name: "macOS-Intel" },
@@ -9,7 +9,7 @@ const targets = [
   { platform: "windows", arch: "x64", ext: ".exe", name: "Windows-x64" },
 ];
 
-console.log(`🐝 Building ${config.app.name} v${config.app.version} for all platforms...\n`);
+console.log(`🥐 Building ${config.app.name} v${config.app.version} for all platforms...\n`);
 
 // Info about baseline builds for maximum compatibility
 console.log("ℹ️  Using baseline builds for Windows/Linux (maximum CPU compatibility)");
@@ -40,7 +40,7 @@ await Bun.write(`${config.build.outdir}/.gitkeep`, "");
 
 // Build frontend first
 console.log("📦 Building frontend...");
-const frontendBuild = Bun.spawnSync(["bun", "run", "build:frontend"], {
+const frontendBuild = Bun.spawnSync(["bun", "run", "bake:frontend"], {
   stdout: "inherit",
   stderr: "inherit",
 });

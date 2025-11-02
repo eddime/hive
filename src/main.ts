@@ -1,4 +1,4 @@
-// 🐝 Hive Main Entry Point
+// 🥐 Bunery Main Entry Point
 // ⚠️  DON'T EDIT THIS FILE unless you know what you're doing!
 // 👉 Edit your app in src/frontend/ and src/backend/
 
@@ -7,7 +7,7 @@ import "./fix-webview-path";
 
 import { Webview, SizeHint } from "webview-bun";
 import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
-import config from "../hive.config";
+import config from "../bunery.config";
 import { registerBindings } from "./backend/bindings";
 import { AssetServer } from "../lib/asset-server";
 

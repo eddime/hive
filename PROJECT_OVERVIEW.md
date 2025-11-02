@@ -1,8 +1,8 @@
-# 🐝 Hive Project Overview
+# 🥐 Bunery Project Overview
 
-## What is Hive?
+## What is Bunery?
 
-Hive is a **lightweight fullstack desktop framework** that combines:
+Bunery is a **lightweight fullstack desktop framework** that combines:
 - 🚀 Bun (fastest JavaScript runtime)
 - 🌐 Webview (native OS webview for UI)
 - ⚡ Direct Frontend ↔ Backend communication (no HTTP overhead)
@@ -22,16 +22,16 @@ Hive is a **lightweight fullstack desktop framework** that combines:
 
 ### Quick Start
 ```bash
-git clone <your-hive-repo>
-cd hive
+git clone <your-bunery-repo>
+cd bunery
 bun install
 bun run dev
 ```
 
 ### Project Structure
 ```
-hive/
-├── hive.config.ts       # ⚙️  Configure your app here
+bunery/
+├── bunery.config.ts       # ⚙️  Configure your app here
 ├── src/
 │   ├── frontend/        # 🎨 Edit your UI here
 │   │   ├── index.html
@@ -67,8 +67,8 @@ hive/
 
 4. **Build for Production**
    ```bash
-   bun run build      # Current platform
-   bun run build:all  # All platforms
+   bun run bake      # Current platform
+   bun run bake:all  # All platforms
    ```
 
 ### Commands
@@ -77,11 +77,11 @@ hive/
 |--------------------|------------------------------------|
 | `bun run dev`      | Start with hot reload (recommended)|
 | `bun run dev:simple` | Start without file watching      |
-| `bun run build`    | Build for current platform         |
-| `bun run build:all`| Build for all platforms            |
+| `bun run bake`    | Build for current platform         |
+| `bun run bake:all`| Build for all platforms            |
 | `bun run clean`    | Clean build artifacts              |
 
-### Configuration (`hive.config.ts`)
+### Configuration (`bunery.config.ts`)
 
 ```typescript
 export default {
@@ -150,7 +150,7 @@ System/APIs
 
 ## Comparison
 
-| Feature | Hive | Tauri | Electron | Neutralino |
+| Feature | Bunery | Tauri | Electron | Neutralino |
 |---------|------|-------|----------|------------|
 | Runtime | Bun | Rust | Node | C++ |
 | Bundle | 58MB | 5MB | 150MB | 3MB |
@@ -163,9 +163,9 @@ System/APIs
 
 1. Read [GETTING_STARTED.md](GETTING_STARTED.md) for detailed guide
 2. Check example code in `src/frontend/` and `src/backend/`
-3. Customize `hive.config.ts`
+3. Customize `bunery.config.ts`
 4. Build something awesome! 🚀
 
 ---
 
-**Made with 🐝 and Bun**
+**Made with 🥐 and Bun**

@@ -1,7 +1,7 @@
-// 🐝 Hive Build Script (Current Platform)
-import config from "../hive.config";
+// 🥐 Bunery Build Script (Current Platform)
+import config from "../bunery.config";
 
-console.log(`🐝 Building ${config.app.name} v${config.app.version}...`);
+console.log(`🥐 Building ${config.app.name} v${config.app.version}...`);
 console.log(`🎯 Target: ${process.platform}-${process.arch}\n`);
 
 // Clean dist directory first
@@ -40,7 +40,7 @@ await Bun.write(`${config.build.outdir}/.gitkeep`, "");
 
 // Build frontend first
 console.log("📦 Building frontend...");
-const frontendBuild = Bun.spawnSync(["bun", "run", "build:frontend"], {
+const frontendBuild = Bun.spawnSync(["bun", "run", "bake:frontend"], {
   stdout: "inherit",
   stderr: "inherit",
 });

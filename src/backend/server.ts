@@ -1,4 +1,4 @@
-// 🐝 Hive Backend - Your App Logic
+// 🥐 Bunery Backend - Your App Logic
 // 👉 PUT YOUR BACKEND LOGIC HERE
 // All functions exported here can be called from the frontend via bindings
 
