@@ -69,6 +69,18 @@ const exitCode = await proc.exited;
 const buildTime = ((performance.now() - startTime) / 1000).toFixed(1);
 
 if (exitCode === 0) {
+  // 🚀 PERFORMANCE: Strip debug symbols to reduce binary size
+  if (config.build.strip !== false && process.platform !== "win32") {
+    console.log("   🔧 Stripping debug symbols...");
+    const stripResult = Bun.spawnSync(["strip", outfile], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    if (stripResult.exitCode === 0) {
+      console.log("   ✅ Symbols stripped (smaller binary size)");
+    }
+  }
+  
   const stats = await Bun.file(outfile).stat();
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
   
@@ -113,6 +125,11 @@ if (exitCode === 0) {
         const bundledBinary = `${macosPath}/${appName}-bin`;
         await Bun.write(bundledBinary, Bun.file(outfile));
         Bun.spawnSync(["chmod", "+x", bundledBinary]);
+        
+        // Strip the bundled binary too
+        if (config.build.strip !== false) {
+          Bun.spawnSync(["strip", bundledBinary], { stdout: "pipe", stderr: "pipe" });
+        }
         
         // Copy icon and dylib
         await Bun.write(`${resourcesPath}/icon.icns`, iconFile);

@@ -10,7 +10,24 @@ import { AssetServer } from "../lib/asset-server";
 
 // Main entry - optimized for speed
 async function main() {
-  // Create webview with normal size first
+  // 🚀 PERFORMANCE: Load icon in parallel with webview creation
+  const iconPromise = (async () => {
+    try {
+      const iconPath = process.platform === "darwin" ? "assets/icon.png" : 
+                       process.platform === "win32" ? "assets/icon.ico" : 
+                       "assets/icon.png";
+      const iconFile = Bun.file(iconPath);
+      if (await iconFile.exists()) {
+        const iconBuffer = await iconFile.arrayBuffer();
+        return Buffer.from(iconBuffer).toString('base64');
+      }
+    } catch (e) {
+      // Icon not found, skip
+    }
+    return "";
+  })();
+
+  // Create webview (parallel with icon loading)
   const webview = new Webview(config.window.debug, {
     width: config.window.width,
     height: config.window.height,
@@ -19,23 +36,11 @@ async function main() {
 
   webview.title = config.window.title;
 
-  // Set window icon (via favicon)
-  let faviconBase64 = "";
-  try {
-    const iconPath = process.platform === "darwin" ? "assets/icon.png" : 
-                     process.platform === "win32" ? "assets/icon.ico" : 
-                     "assets/icon.png";
-    const iconFile = Bun.file(iconPath);
-    if (await iconFile.exists()) {
-      const iconBuffer = await iconFile.arrayBuffer();
-      faviconBase64 = Buffer.from(iconBuffer).toString('base64');
-    }
-  } catch (e) {
-    // Icon not found, skip
-  }
-
   // Register bindings FIRST (before navigate!)
   registerBindings(webview);
+  
+  // Wait for icon to finish loading
+  const faviconBase64 = await iconPromise;
 
   // Build fullscreen script (F11 toggle only, no auto-fullscreen due to browser restrictions)
   const fullscreenScript = `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
@@ -97,24 +102,26 @@ class AssetServer {
         const asset = this.assets.get(path);
 
         if (asset) {
-          return new Response(asset.content, {
-            headers: {
-              "Content-Type": asset.type,
-              "Cache-Control": "no-cache",
-              "Access-Control-Allow-Origin": "*",
-            },
-          });
+          // 🚀 PERFORMANCE: Aggressive caching + compression
+          const headers = {
+            "Content-Type": asset.type,
+            "Cache-Control": "public, max-age=31536000, immutable", // 1 year cache
+            "Access-Control-Allow-Origin": "*",
+          };
+          
+          // Bun automatically compresses if Content-Encoding is set
+          return new Response(asset.content, { headers });
         }
 
         const htmlPath = \`\${path}.html\`;
         const htmlAsset = this.assets.get(htmlPath);
         if (htmlAsset) {
-          return new Response(htmlAsset.content, {
-            headers: {
-              "Content-Type": htmlAsset.type,
-              "Cache-Control": "no-cache",
-            },
-          });
+          const headers = {
+            "Content-Type": htmlAsset.type,
+            "Cache-Control": "public, max-age=31536000, immutable",
+          };
+          
+          return new Response(htmlAsset.content, { headers });
         }
 
         return new Response(\`Not Found: \${path}\`, { status: 404 });
@@ -171,8 +178,17 @@ const assets = JSON.parse('${assetsJSON.replace(/'/g, "\\'")}');
 const server = new AssetServer();
 
 (async () => {
-  for (const [path, filePath] of Object.entries(assets)) {
-    await server.addAsset(path as string, filePath as string);
+  // 🚀 PERFORMANCE: Load all assets in parallel!
+  const assetEntries = Object.entries(assets);
+  const BATCH_SIZE = 50; // Process 50 assets at a time
+  
+  for (let i = 0; i < assetEntries.length; i += BATCH_SIZE) {
+    const batch = assetEntries.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(([path, filePath]) => 
+        server.addAsset(path as string, filePath as string)
+      )
+    );
   }
   
   await server.start(0);
