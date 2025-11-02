@@ -58,6 +58,11 @@ async function main() {
       throw new Error("No embedded assets found! Run 'bun run build:frontend' first.");
     }
     
+    if (config.window.debug) {
+      console.log(`📦 Embedded assets: ${Object.keys(embeddedAssets).length} files`);
+      console.log(`📝 Assets:`, Object.keys(embeddedAssets).join(", "));
+    }
+    
     // Create worker code (works in both dev and production!)
     // Import AssetServer in main thread and pass the class to worker
     const assetsJSON = JSON.stringify(Object.fromEntries(Object.entries(embeddedAssets)));
@@ -320,6 +325,9 @@ const server = new AssetServer();
       worker.onmessage = (event) => {
         if (event.data.type === 'ready') {
           serverURL = event.data.url;
+          if (config.window.debug) {
+            console.log(`🌐 Asset Server ready: ${serverURL}`);
+          }
           resolve();
         }
       };
@@ -329,8 +337,19 @@ const server = new AssetServer();
     const entryPath = entryPoint.startsWith('/') ? entryPoint : `/${entryPoint}`;
     const baseURL = `${serverURL}${entryPoint.includes('/') ? '/' + entryPoint.substring(0, entryPoint.lastIndexOf('/') + 1) : '/'}`;
     
+    if (config.window.debug) {
+      console.log(`📄 Entry point: ${entryPath}`);
+      console.log(`🔗 Base URL: ${baseURL}`);
+      console.log(`🌐 Fetching HTML from: ${serverURL}${entryPath}`);
+    }
+    
     // Fetch the HTML
     const html = await fetch(`${serverURL}${entryPath}`).then(r => r.text());
+    
+    if (config.window.debug) {
+      console.log(`✅ HTML fetched: ${html.length} bytes`);
+      console.log(`📝 HTML preview: ${html.substring(0, 200)}...`);
+    }
     
     // Inject <base> tag and favicon to make ALL relative URLs point to HTTP server!
     const faviconTag = faviconBase64 ? `<link rel="icon" type="image/png" href="data:image/png;base64,${faviconBase64}">` : '';

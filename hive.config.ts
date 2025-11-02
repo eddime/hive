@@ -10,7 +10,7 @@ export default {
     resizable: true,        // Allow window resizing
     fullscreen: false,      // F11 to toggle fullscreen
     startFullscreen: false,  // Auto-fullscreen on launch (games, kiosk mode)
-    debug: isDev,           // DevTools only in development
+    debug: true,            // Enable debug logs (set to false for production)
   },
 
   // Development settings
