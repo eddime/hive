@@ -261,15 +261,33 @@ exec "$DIR/${appName}-bin" "$@"
   if (isWindowsBuild && process.platform !== "win32" && config.build.windows?.icon) {
     console.log(`\n🎨 Applying icon with rcedit...`);
     
-    // Check if rcedit is available
-    const rceditCheck = Bun.spawnSync(["which", "rcedit"], {
+    // Try to find rcedit (global or local)
+    let rceditCmd = "rcedit";
+    
+    // Check global rcedit first
+    const globalCheck = Bun.spawnSync(["which", "rcedit"], {
       stdout: "pipe",
       stderr: "pipe",
     });
     
-    if (rceditCheck.exitCode === 0) {
+    // If not global, try local node_modules
+    if (globalCheck.exitCode !== 0) {
+      const localRcedit = "node_modules/.bin/rcedit";
+      const localFile = Bun.file(localRcedit);
+      if (await localFile.exists()) {
+        rceditCmd = localRcedit;
+      } else {
+        console.log(`   💡 rcedit not found - install with:`);
+        console.log(`      npm install -g rcedit  (global)`);
+        console.log(`      npm install --save-dev rcedit  (local)`);
+        console.log(`   ℹ️  Or build on Windows for automatic icon embedding`);
+        rceditCmd = null;
+      }
+    }
+    
+    if (rceditCmd) {
       const rceditResult = Bun.spawnSync([
-        "rcedit",
+        rceditCmd,
         outfile,
         "--set-icon",
         config.build.windows.icon
@@ -283,9 +301,6 @@ exec "$DIR/${appName}-bin" "$@"
       } else {
         console.warn(`   ⚠️  rcedit failed: ${rceditResult.stderr.toString()}`);
       }
-    } else {
-      console.log(`   💡 rcedit not found - install with: npm install -g rcedit`);
-      console.log(`   ℹ️  Or build on Windows for automatic icon embedding`);
     }
   }
   

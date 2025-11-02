@@ -18,22 +18,37 @@ bun bake win
 ✅ Icon is automatically embedded  
 ✅ Uses `--windows-icon=assets/icon.ico`
 
-### Option 2: Post-Build Icon Injection (Cross-Platform)
+### Option 2: rcedit (Automatic - Recommended for Cross-Platform)
 
-Use `rcedit` to add icon after building:
+Install `rcedit` once, then Bunery applies icons automatically:
 
 ```bash
-# Install rcedit (on macOS/Linux)
+# Option A: Global installation (recommended)
 npm install -g rcedit
 
+# Option B: Local installation (alternative)
+npm install --save-dev rcedit
+# or
+bun add -d rcedit
+
+# Then build - icon is auto-applied!
+bun bake win
+bun bake all
+```
+
+### Option 3: Manual rcedit (Without Auto-Detection)
+
+Apply icon manually after building:
+
+```bash
 # Build without icon
 bun bake win
 
 # Add icon manually
-rcedit dist/bunery-windows-x64.exe --set-icon assets/icon.ico
+npx rcedit dist/bunery-windows-x64.exe --set-icon assets/icon.ico
 ```
 
-### Option 3: GitHub Actions (Automated)
+### Option 4: GitHub Actions (Automated)
 
 ```yaml
 # .github/workflows/build-windows.yml
