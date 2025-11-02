@@ -1,0 +1,36 @@
+🔧 Add Bunery CLI - Simple 'bake' commands
+
+✨ New Feature: CLI Wrapper
+- ./bake dev         → Start development
+- ./bake all         → Build all platforms  
+- ./bake mac         → Build macOS only
+- ./bake windows     → Build Windows only
+- ./bake linux       → Linux only
+- ./bake frontend    → Build frontend
+- ./bake clean       → Clean artifacts
+- ./bake help        → Show help
+
+📦 Files:
+- bake              → Bash CLI wrapper
+- cli.ts            → TypeScript CLI (alternative)
+- package.json      → Added bin entry
+- README.md         → Updated with new commands
+
+💡 Usage:
+```
+# Instead of:
+bun run dev
+bun run bake:all
+
+# Now use:
+./bake dev
+./bake all
+```
+
+🎯 Benefits:
+- Shorter commands
+- Intuitive naming  
+- Platform-specific builds
+- Easy to remember
+- Compatible with future CLI npm package
+

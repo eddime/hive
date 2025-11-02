@@ -20,13 +20,15 @@ Like Tauri/Electron/Neutralino - but simpler and with direct bindings (\<1ms).
 bun install
 
 # Develop with hot reload
-bun run dev
+bun dev
 
 # Bake for your platform
-bun run bake
+bun bake mac        # macOS
+bun bake win        # Windows
+bun bake linux      # Linux
 
 # Bake for all platforms
-bun run bake:all
+bun bake all
 ```
 
 ## Project Structure
@@ -107,19 +109,22 @@ export default {
 };
 ```
 
-## Build Options
+## Commands
 
 ```bash
 # Development
-bun run dev           # Hot reload
+bun dev               # Hot reload development
 
-# Production
-bun run bake          # Current platform
-bun run bake:all      # All platforms (macOS, Linux, Windows)
+# Production builds
+bun bake all          # All platforms (macOS, Linux, Windows)
+bun bake mac          # macOS only
+bun bake win          # Windows only
+bun bake linux        # Linux only
 
-# Aliases (backwards compatible)
-bun run bake
-bun run bake:all
+# Other
+bun bake frontend     # Frontend assets only
+bun bake clean        # Clean build artifacts
+bun bake help         # Show all commands
 ```
 
 ## Output
