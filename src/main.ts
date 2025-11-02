@@ -19,89 +19,82 @@ async function main() {
 
   webview.title = config.window.title;
 
-  // Build fullscreen script
-  const isFullscreen = config.window.startFullscreen;
-  const fullscreenScript = isFullscreen
-    ? `setTimeout(()=>document.documentElement.requestFullscreen().catch(e=>console.warn('Fullscreen failed:',e)),100);document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`
-    : `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
-
-  // Register bindings
+  // Register bindings FIRST (before navigate!)
   registerBindings(webview);
+  
+  // Build fullscreen script (F11 toggle only, no auto-fullscreen due to browser restrictions)
+  const fullscreenScript = `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
 
   // Check if asset server mode is enabled
   if (htmlPath === "ASSET_SERVER") {
-    // Asset Server Mode: Serve embedded assets via HTTP (no size limits!)
-    const server = new AssetServer();
+    // FINAL SOLUTION: Background server + setHTML + <base> tag!
+    // Server runs in separate process so it can handle requests even when webview.run() blocks!
     
-    // Load assets from embedded files (bundled in binary)
+    // Load assets from embedded files
     if (!embeddedAssets || Object.keys(embeddedAssets).length === 0) {
       throw new Error("No embedded assets found! Run 'bun run build:frontend' first.");
     }
     
-    // Add all embedded assets in PARALLEL (much faster!)
-    const assetEntries = Object.entries(embeddedAssets);
-    await Promise.all(
-      assetEntries.map(([path, filePath]) => server.addAsset(path, filePath))
-    );
-    
-    await server.start(0);
-    const serverURL = server.getURL();
-    
-    // Fetch HTML
-    let html = await fetch(`${serverURL}/index.html`).then(r => r.text());
-    
-    // Find all CSS and JS/TS files FIRST (avoid regex in loop)
-    const cssMatches = Array.from(html.matchAll(/<link[^>]*href=["']([^"']+\.css)["'][^>]*>/gi));
-    const jsMatches = Array.from(html.matchAll(/<script[^>]*src=["']([^"']+\.(js|ts))["'][^>]*><\/script>/gi));
-    
-    // Fetch all CSS files in PARALLEL
-    const cssContents = await Promise.all(
-      cssMatches.map(match => {
-        const cssPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
-        return fetch(`${serverURL}/${cssPath}`).then(r => r.text());
-      })
-    );
-    
-    // Replace CSS files with inlined styles
-    cssMatches.forEach((match, i) => {
-      html = html.replace(match[0], `<style>${cssContents[i]}</style>`);
+    // Start AssetServer in background process
+    const assetsJSON = JSON.stringify(Object.fromEntries(Object.entries(embeddedAssets)));
+    const serverProcess = Bun.spawn(["bun", "run", "lib/asset-server-worker.ts", assetsJSON], {
+      stdout: "pipe",
+      stderr: "inherit",
     });
     
-    // Create single transpiler instance (reuse for all files)
-    const transpiler = new Bun.Transpiler({
-      loader: 'ts',
-      target: 'browser',
-    });
+    // Wait for server to be ready and get URL
+    const reader = serverProcess.stdout.getReader();
+    let serverURL = "";
     
-    // Fetch all JS/TS files in PARALLEL
-    const jsContents = await Promise.all(
-      jsMatches.map(async (match) => {
-        const jsPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
-        let jsContent = await fetch(`${serverURL}/${jsPath}`).then(r => r.text());
-        
-        // Transpile TypeScript if needed
-        if (jsPath.endsWith('.ts')) {
-          jsContent = transpiler.transformSync(jsContent);
-        }
-        
-        return jsContent;
-      })
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      const text = new TextDecoder().decode(value);
+      const match = text.match(/SERVER_READY:(.+)/);
+      if (match) {
+        serverURL = match[1].trim();
+        break;
+      }
+    }
+    
+    if (!serverURL) {
+      throw new Error("Failed to start AssetServer!");
+    }
+    
+    const entryPoint = config.build.frontend.entryPoint || "index.html";
+    const entryPath = entryPoint.startsWith('/') ? entryPoint : `/${entryPoint}`;
+    const baseURL = `${serverURL}${entryPoint.includes('/') ? '/' + entryPoint.substring(0, entryPoint.lastIndexOf('/') + 1) : '/'}`;
+    
+    // Fetch the HTML
+    const html = await fetch(`${serverURL}${entryPath}`).then(r => r.text());
+    
+    // Inject <base> tag to make ALL relative URLs point to HTTP server!
+    const htmlWithBase = html.replace(
+      /<head>/i,
+      `<head><base href="${baseURL}">`
     );
     
-    // Replace JS/TS files with inlined scripts
-    jsMatches.forEach((match, i) => {
-      const moduleAttr = match[0].includes('type="module"') ? ' type="module"' : '';
-      html = html.replace(match[0], `<script${moduleAttr}>${jsContents[i]}</script>`);
-    });
+    if (config.window.debug) {
+      console.log(`🌐 Server: ${serverURL}`);
+      console.log(`📄 Base: ${baseURL}`);
+    }
     
-    // Inject HTML (preserves bindings!)
-    webview.setHTML(html);
+    // Inject JS utilities
+    const finalHTML = htmlWithBase.replace(
+      /<\/head>/i,
+      `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}";</script></head>`
+    );
+    
+    // Use setHTML - bindings work!
+    webview.setHTML(finalHTML);
     
     // Run webview (blocking - returns when window closes)
     webview.run();
     
-    // Clean up: Stop asset server after webview closes
-    server.stop();
+    // Clean up
+    serverProcess.kill();
+    await serverProcess.exited;
     
   } else {
     // Fallback: Embedded mode (if asset server disabled)

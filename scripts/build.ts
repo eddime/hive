@@ -175,7 +175,7 @@ exec "$DIR/${appName}-bin" "$@"
   if (process.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
     console.log(`   📦 ${config.build.outdir}/${config.app.name}.app`);
   } else {
-    console.log(`   📦 ${outfile} (${sizeMB} MB)`);
+  console.log(`   📦 ${outfile} (${sizeMB} MB)`);
   }
   console.log(`   🎯 Platform: ${process.platform}-${process.arch}`);
   console.log(`\n💡 Tip: Run "bun run build:all" to build for all platforms`);

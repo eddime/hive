@@ -4,12 +4,12 @@ const isDev = process.env.NODE_ENV !== "production";
 export default {
   // Window settings
   window: {
-    title: "Hive - Fullstack Desktop App",
-    width: 1200,
+    title: "Candy Catch - Hive",
+    width: 1280,
     height: 720,
     resizable: true,        // Allow window resizing
     fullscreen: false,      // F11 to toggle fullscreen
-    startFullscreen: false, // Auto-fullscreen on launch (games, kiosk mode)
+    startFullscreen: false,  // Auto-fullscreen on launch (games, kiosk mode)
     debug: isDev,           // DevTools only in development
   },
 
@@ -38,6 +38,7 @@ export default {
       // Asset server: Embeds all files in binary, serves via HTTP at runtime
       // NO SIZE LIMITS! Works in dev AND production! 🚀
       assetServer: true,
+      entryPoint: "game/index.html",  // Entry HTML file (default: "index.html")
     },
     
     // Platform-specific settings

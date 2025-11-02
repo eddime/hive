@@ -5,7 +5,7 @@ interface BindingResult<T> {
   value?: T;
   error?: boolean;
   message?: string;
-}
+  }
 
 async function callBinding<T>(binding: string, args?: any): Promise<T> {
   const fn = (window as any)[`__${binding}`];
@@ -34,7 +34,7 @@ if (import.meta.hot) {
   import.meta.hot.accept();
   if (import.meta.hot.data.initialized) loadCounter();
   else import.meta.hot.data.initialized = true;
-}
+    }
 
 // DOM Cache
 const counter = document.getElementById('counter')!;

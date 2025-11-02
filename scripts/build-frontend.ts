@@ -40,14 +40,14 @@ ${assetsMap}
 
 } else {
   // Embedded mode: Inline everything (for small apps)
-  const jsResult = await Bun.build({
-    entrypoints: ["./src/frontend/app.ts"],
-    minify: {
-      whitespace: true,
-      identifiers: true,
-      syntax: true,
-    },
-    target: "browser",
+const jsResult = await Bun.build({
+  entrypoints: ["./src/frontend/app.ts"],
+  minify: {
+    whitespace: true,
+    identifiers: true,
+    syntax: true,
+  },
+  target: "browser",
     format: "esm",
     splitting: false,
     treeshaking: true,
@@ -55,49 +55,49 @@ ${assetsMap}
       "import.meta.env.MODE": '"production"',
       "process.env.NODE_ENV": '"production"'
     },
-  });
+});
 
-  if (!jsResult.success) {
-    console.error("❌ JS Build failed!");
-    process.exit(1);
-  }
+if (!jsResult.success) {
+  console.error("❌ JS Build failed!");
+  process.exit(1);
+}
 
-  const jsCode = await jsResult.outputs[0].text();
+const jsCode = await jsResult.outputs[0].text();
 
   // Read and minify CSS
-  let cssCode = await Bun.file("./src/frontend/styles.css").text();
-  cssCode = cssCode
+let cssCode = await Bun.file("./src/frontend/styles.css").text();
+cssCode = cssCode
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/\s+/g, " ")
     .replace(/\s*([{}:;,])\s*/g, "$1")
-    .trim();
+  .trim();
 
   // Read HTML template
-  const htmlTemplate = await Bun.file("./src/frontend/index.html").text();
+const htmlTemplate = await Bun.file("./src/frontend/index.html").text();
 
   // Create standalone HTML with inlined CSS and JS
-  let standaloneHTML = htmlTemplate
+let standaloneHTML = htmlTemplate
     .replace(/<link[^>]*href=["']styles\.css["'][^>]*>/i, `<style>${cssCode}</style>`)
     .replace(/<script[^>]*src=["']app\.ts["'][^>]*><\/script>/i, `<script>${jsCode}</script>`);
 
-  // Minify HTML
-  standaloneHTML = standaloneHTML
+// Minify HTML
+standaloneHTML = standaloneHTML
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/\s+/g, " ")
     .replace(/>\s+</g, "><")
-    .trim();
+  .trim();
 
   // Embed HTML into TypeScript module
   const embeddedHtmlTs = `// Auto-generated - Embedded mode\nexport const htmlContent = ${JSON.stringify(standaloneHTML)};\nexport const htmlPath = null;\n`;
-  await Bun.write("./src/embedded-html.ts", embeddedHtmlTs);
+await Bun.write("./src/embedded-html.ts", embeddedHtmlTs);
 
-  const htmlSize = (standaloneHTML.length / 1024).toFixed(1);
-  const jsSize = (jsCode.length / 1024).toFixed(1);
-  const cssSize = (cssCode.length / 1024).toFixed(1);
+const htmlSize = (standaloneHTML.length / 1024).toFixed(1);
+const jsSize = (jsCode.length / 1024).toFixed(1);
+const cssSize = (cssCode.length / 1024).toFixed(1);
 
-  console.log("✅ Frontend built successfully!");
-  console.log(`   📄 HTML: ${htmlSize} KB (inlined)`);
-  console.log(`   🎨 CSS:  ${cssSize} KB (minified)`);
-  console.log(`   📦 JS:   ${jsSize} KB (minified + treeshaken)`);
+console.log("✅ Frontend built successfully!");
+console.log(`   📄 HTML: ${htmlSize} KB (inlined)`);
+console.log(`   🎨 CSS:  ${cssSize} KB (minified)`);
+console.log(`   📦 JS:   ${jsSize} KB (minified + treeshaken)`);
   console.log(`   💾 Total: ${htmlSize} KB`);
 }
