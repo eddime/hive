@@ -2,6 +2,9 @@
 // ⚠️  DON'T EDIT THIS FILE unless you know what you're doing!
 // 👉 Edit your app in src/frontend/ and src/backend/
 
+// IMPORTANT: Fix webview DLL path before importing webview-bun
+import "./fix-webview-path";
+
 import { Webview, SizeHint } from "webview-bun";
 import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../hive.config";
