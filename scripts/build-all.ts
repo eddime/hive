@@ -11,6 +11,15 @@ const targets = [
 
 console.log(`🐝 Building ${config.app.name} v${config.app.version} for all platforms...\n`);
 
+// Warning about cross-compilation limitations
+if (process.platform !== "win32") {
+  console.log("⚠️  WARNING: Cross-compiling for Windows from macOS/Linux");
+  console.log("   Windows .exe may use incompatible CPU instructions (AVX2)");
+  console.log("   Error 0xc000001d may occur on older Windows machines");
+  console.log("   👉 For production: Build Windows .exe ON Windows!");
+  console.log("   See WINDOWS_BUILD.md for details\n");
+}
+
 // Clean dist directory first
 console.log("🗑️  Cleaning dist directory...");
 try {
