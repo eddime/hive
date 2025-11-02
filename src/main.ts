@@ -67,6 +67,7 @@ class AssetServer {
     this.server = null;
     this.port = 0;
     this.assets = new Map();
+    this.compressedCache = new Map(); // 🚀 BUN OPTIMIZATION: Cache compressed versions
   }
 
   async addAsset(virtualPath, source, contentType) {
@@ -86,6 +87,19 @@ class AssetServer {
     }
 
     this.assets.set(virtualPath, { content, type });
+    
+    // 🚀 BUN OPTIMIZATION: Pre-compress compressible assets
+    const compressible = ['text/', 'application/javascript', 'application/json', 'image/svg'];
+    if (compressible.some(ct => type.includes(ct)) && content.length > 1024) {
+      try {
+        const compressed = Bun.gzipSync(content);
+        if (compressed.length < content.length * 0.9) { // Only if >10% smaller
+          this.compressedCache.set(virtualPath, compressed);
+        }
+      } catch (e) {
+        // Compression failed, use original
+      }
+    }
   }
 
   async start(preferredPort = 0) {
@@ -111,6 +125,23 @@ class AssetServer {
           // Check if client has cached version
           if (req.headers.get("if-none-match") === etag) {
             return new Response(null, { status: 304 });
+          }
+          
+          // 🚀 BUN OPTIMIZATION: Serve compressed if available and accepted
+          const acceptsGzip = req.headers.get("accept-encoding")?.includes("gzip");
+          const compressed = this.compressedCache.get(path);
+          
+          if (acceptsGzip && compressed) {
+            const headers = {
+              "Content-Type": asset.type,
+              "Content-Encoding": "gzip",
+              "Cache-Control": "public, max-age=31536000, immutable",
+              "ETag": etag,
+              "Access-Control-Allow-Origin": "*",
+              "X-Content-Type-Options": "nosniff",
+              "Vary": "Accept-Encoding",
+            };
+            return new Response(compressed, { headers });
           }
           
           const headers = {
