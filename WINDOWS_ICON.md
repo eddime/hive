@@ -105,6 +105,17 @@ But this requires `rcedit` to be installed globally.
 ## 📝 Current Status
 
 ✅ Icon works when building on Windows  
-❌ Icon doesn't work when cross-compiling  
-💡 Use one of the solutions above  
+🔧 **Auto-rcedit**: Bunery automatically applies icons via `rcedit` when cross-compiling!  
+💡 Install `rcedit` once: `npm install -g rcedit` (or use CI on Windows)
+
+### Auto-Icon Workflow
+
+When you run `bun bake win` or `bun bake all` on macOS/Linux:
+
+1. ✅ Bun builds the `.exe` (without icon due to API limitation)
+2. 🔍 Bunery checks if `rcedit` is installed
+3. 🎨 If found: Automatically applies icon with `rcedit`
+4. 🎉 Result: `.exe` with correct icon!
+
+No manual steps needed!
 
