@@ -54,12 +54,116 @@ async function main() {
     // Import AssetServer in main thread and pass the class to worker
     const assetsJSON = JSON.stringify(Object.fromEntries(Object.entries(embeddedAssets)));
     
-    // Import AssetServer class definition as string
-    const AssetServerCode = await Bun.file("lib/asset-server.ts").text();
-    
+    // Inline AssetServer code (embedded at compile time)
     const workerCode = `
-// Inline AssetServer code
-${AssetServerCode}
+// AssetServer class embedded directly
+class AssetServer {
+  constructor() {
+    this.server = null;
+    this.port = 0;
+    this.assets = new Map();
+  }
+
+  async addAsset(virtualPath, source, contentType) {
+    let content;
+    let type;
+
+    if (typeof source === "string" && (source.startsWith("./") || source.startsWith("/"))) {
+      const file = Bun.file(source);
+      if (!(await file.exists())) {
+        throw new Error(\`Asset not found: \${source}\`);
+      }
+      content = new Uint8Array(await file.arrayBuffer());
+      type = file.type || this.guessContentType(source);
+    } else {
+      content = source;
+      type = contentType || this.guessContentType(virtualPath);
+    }
+
+    this.assets.set(virtualPath, { content, type });
+  }
+
+  async start(preferredPort = 0) {
+    this.server = Bun.serve({
+      port: preferredPort,
+      fetch: (req) => {
+        const url = new URL(req.url);
+        let path = decodeURIComponent(url.pathname);
+
+        if (path === "/" || path === "") {
+          path = "/index.html";
+        }
+
+        const asset = this.assets.get(path);
+
+        if (asset) {
+          return new Response(asset.content, {
+            headers: {
+              "Content-Type": asset.type,
+              "Cache-Control": "no-cache",
+              "Access-Control-Allow-Origin": "*",
+            },
+          });
+        }
+
+        const htmlPath = \`\${path}.html\`;
+        const htmlAsset = this.assets.get(htmlPath);
+        if (htmlAsset) {
+          return new Response(htmlAsset.content, {
+            headers: {
+              "Content-Type": htmlAsset.type,
+              "Cache-Control": "no-cache",
+            },
+          });
+        }
+
+        return new Response(\`Not Found: \${path}\`, { status: 404 });
+      },
+    });
+
+    this.port = this.server.port;
+    return this.port;
+  }
+
+  getURL() {
+    return \`http://localhost:\${this.port}\`;
+  }
+
+  stop() {
+    if (this.server) {
+      this.server.stop();
+    }
+  }
+
+  guessContentType(path) {
+    const ext = path.split(".").pop()?.toLowerCase();
+    const types = {
+      html: "text/html",
+      css: "text/css",
+      js: "application/javascript",
+      json: "application/json",
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      svg: "image/svg+xml",
+      webp: "image/webp",
+      ico: "image/x-icon",
+      mp3: "audio/mpeg",
+      wav: "audio/wav",
+      ogg: "audio/ogg",
+      mp4: "video/mp4",
+      webm: "video/webm",
+      woff: "font/woff",
+      woff2: "font/woff2",
+      ttf: "font/ttf",
+      otf: "font/otf",
+      wasm: "application/wasm",
+      txt: "text/plain",
+    };
+    return types[ext || ""] || "application/octet-stream";
+  }
+}
 
 declare var self: Worker;
 
