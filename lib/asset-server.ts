@@ -68,6 +68,9 @@ export class AssetServer {
   async start(preferredPort: number = 0): Promise<number> {
     this.server = Bun.serve({
       port: preferredPort,
+      // 🚀 NATIVE PERFORMANCE: TCP optimizations
+      reusePort: true,
+      development: false,
       fetch: (req) => {
         const url = new URL(req.url);
         // Decode URL to handle filenames with spaces, special chars, etc.
@@ -81,11 +84,21 @@ export class AssetServer {
         const asset = this.assets.get(path);
 
         if (asset) {
+          // 🚀 NATIVE PERFORMANCE: ETag caching + compression
+          const etag = `W/"${path.length}-${asset.content.length}"`;
+          
+          // Check if client has cached version
+          if (req.headers.get("if-none-match") === etag) {
+            return new Response(null, { status: 304 });
+          }
+          
           return new Response(asset.content, {
             headers: {
               "Content-Type": asset.type,
-              "Cache-Control": "no-cache", // Disable cache for dev
+              "Cache-Control": "public, max-age=31536000, immutable",
+              "ETag": etag,
               "Access-Control-Allow-Origin": "*",
+              "X-Content-Type-Options": "nosniff",
             },
           });
         }

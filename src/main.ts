@@ -91,6 +91,9 @@ class AssetServer {
   async start(preferredPort = 0) {
     this.server = Bun.serve({
       port: preferredPort,
+      // 🚀 NATIVE PERFORMANCE: TCP optimizations
+      reusePort: true,
+      development: false,
       fetch: (req) => {
         const url = new URL(req.url);
         let path = decodeURIComponent(url.pathname);
@@ -102,14 +105,22 @@ class AssetServer {
         const asset = this.assets.get(path);
 
         if (asset) {
-          // 🚀 PERFORMANCE: Aggressive caching + compression
+          // 🚀 NATIVE PERFORMANCE: Aggressive caching + ETag + compression
+          const etag = \`W/"\${path.length}-\${asset.content.length}"\`;
+          
+          // Check if client has cached version
+          if (req.headers.get("if-none-match") === etag) {
+            return new Response(null, { status: 304 });
+          }
+          
           const headers = {
             "Content-Type": asset.type,
-            "Cache-Control": "public, max-age=31536000, immutable", // 1 year cache
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "ETag": etag,
             "Access-Control-Allow-Origin": "*",
+            "X-Content-Type-Options": "nosniff",
           };
           
-          // Bun automatically compresses if Content-Encoding is set
           return new Response(asset.content, { headers });
         }
 
@@ -230,9 +241,61 @@ const server = new AssetServer();
     
     // Inject <base> tag and favicon to make ALL relative URLs point to HTTP server!
     const faviconTag = faviconBase64 ? `<link rel="icon" type="image/png" href="data:image/png;base64,${faviconBase64}">` : '';
+    
+    // 🚀 NATIVE PERFORMANCE: Inject performance optimizations
+    const performanceScript = `
+      <script>
+        // GPU acceleration & passive listeners
+        (function() {
+          // Force GPU compositing on body
+          document.addEventListener('DOMContentLoaded', () => {
+            document.body.style.transform = 'translateZ(0)';
+            document.body.style.backfaceVisibility = 'hidden';
+          });
+          
+          // Override addEventListener to use passive listeners by default
+          const originalAddEventListener = EventTarget.prototype.addEventListener;
+          EventTarget.prototype.addEventListener = function(type, listener, options) {
+            if (typeof options === 'boolean') {
+              options = { capture: options, passive: true };
+            } else if (typeof options === 'object' && options !== null) {
+              options.passive = options.passive !== false;
+            } else {
+              options = { passive: true };
+            }
+            return originalAddEventListener.call(this, type, listener, options);
+          };
+          
+          // Optimize requestAnimationFrame
+          if (window.requestAnimationFrame) {
+            const raf = window.requestAnimationFrame;
+            window.requestAnimationFrame = (callback) => {
+              return raf(() => {
+                try { callback(performance.now()); } catch(e) { console.error(e); }
+              });
+            };
+          }
+        })();
+      </script>
+    `.trim();
+    
+    // 🚀 NATIVE PERFORMANCE: Meta tags for hardware acceleration
+    const performanceTags = `
+      <meta name="renderer" content="webkit">
+      <meta name="force-rendering" content="webkit">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <style>
+        * { 
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+      </style>
+      ${performanceScript}
+    `.trim();
+    
     const htmlWithBase = html.replace(
       /<head>/i,
-      `<head><base href="${baseURL}">${faviconTag}`
+      `<head><base href="${baseURL}">${faviconTag}${performanceTags}`
     );
     
     if (config.window.debug) {
