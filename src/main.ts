@@ -3,7 +3,7 @@
 // 👉 Edit your app in src/frontend/ and src/backend/
 
 import { Webview, SizeHint } from "webview-bun";
-import { htmlContent } from "./embedded-html";
+import { htmlContent, htmlPath } from "./embedded-html";
 import config from "../hive.config";
 import { registerBindings } from "./backend/bindings";
 
@@ -18,23 +18,39 @@ function main() {
 
   webview.title = config.window.title;
 
-  // Register bindings before HTML injection
-  registerBindings(webview);
-
   // Build fullscreen script
   const isFullscreen = config.window.startFullscreen;
   const fullscreenScript = isFullscreen
     ? `setTimeout(()=>document.documentElement.requestFullscreen().catch(e=>console.warn('Fullscreen failed:',e)),100);document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`
     : `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
 
-  // Single-pass HTML injection
+  // Register bindings first (works for both modes)
+  registerBindings(webview);
+
+  // Inject version and fullscreen
+  if (!htmlContent) {
+    throw new Error("No HTML content found!");
+  }
+
   const finalHTML = htmlContent.replace(
     /<script>/,
     `<script>window.BUN_VERSION="${Bun.version}";${fullscreenScript}`
   );
 
-  // Set HTML and run (blocking - returns when window closes)
-  webview.setHTML(finalHTML);
+  // Load HTML based on mode
+  if (htmlPath === "EMBEDDED_SERVER") {
+    // External mode: Use Data URL to bypass size limits while keeping bindings!
+    // Data URLs support much larger content than setHTML()
+    const base64Html = btoa(finalHTML); // Bun's native base64 encoding
+    const dataUrl = `data:text/html;base64,${base64Html}`;
+    webview.navigate(dataUrl);
+    
+  } else {
+    // Embedded mode: Direct HTML injection (< 2MB)
+    webview.setHTML(finalHTML);
+  }
+
+  // Run webview (blocking - returns when window closes)
   webview.run();
 
   // webview.run() blocks until window is closed

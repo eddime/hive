@@ -33,6 +33,11 @@ export default {
     outdir: "dist",     // Output directory
     outfile: "hive",    // Executable name
     
+    // Frontend build mode
+    frontend: {
+      mode: "embedded",  // "embedded" (<2MB, fast) or "external" (NO LIMIT, data URL)
+    },
+    
     // Platform-specific settings
     windows: {
       icon: "assets/icon.ico",  // Windows .ico file
