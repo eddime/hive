@@ -50,6 +50,11 @@ export default {
     macos: {
       icon: "assets/icon.icns", // macOS .icns file (optional)
       createAppBundle: true,    // Create .app bundle (true) or standalone binary (false)
+      codesign: {
+        enabled: false,         // Enable code signing (requires Apple Developer ID)
+        identity: "",           // Your signing identity (e.g., "Developer ID Application: Your Name (XXXXXXXXXX)")
+        entitlements: "entitlements.plist", // Path to entitlements file (for JIT support)
+      },
     },
     linux: {
       icon: "assets/icon.png",  // Linux .png file (for desktop entries)

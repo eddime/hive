@@ -150,6 +150,63 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
 </plist>`;
           await Bun.write(`${contentsPath}/Info.plist`, plist);
           
+          // Code signing (if enabled and building for macOS)
+          if (config.build.macos?.codesign?.enabled && config.build.macos?.codesign?.identity) {
+            console.log(`   🔐 Code signing .app bundle...`);
+            
+            const codesignArgs = [
+              "codesign",
+              "--deep",
+              "--force",
+              "-vvvv",
+              "--sign",
+              config.build.macos.codesign.identity,
+            ];
+            
+            // Add entitlements if specified
+            if (config.build.macos.codesign.entitlements) {
+              const entitlementsPath = config.build.macos.codesign.entitlements;
+              const entitlementsFile = Bun.file(entitlementsPath);
+              if (await entitlementsFile.exists()) {
+                codesignArgs.push("--entitlements", entitlementsPath);
+                console.log(`   📜 Using entitlements: ${entitlementsPath}`);
+              } else {
+                console.warn(`   ⚠️  Entitlements file not found: ${entitlementsPath}`);
+              }
+            }
+            
+            codesignArgs.push(appPath);
+            
+            const codesignResult = Bun.spawnSync(codesignArgs, {
+              stdout: "pipe",
+              stderr: "pipe",
+            });
+            
+            if (codesignResult.exitCode === 0) {
+              console.log(`   ✅ Code signing successful`);
+              
+              // Verify the signature
+              const verifyResult = Bun.spawnSync([
+                "codesign",
+                "-vvv",
+                "--verify",
+                appPath,
+              ], {
+                stdout: "pipe",
+                stderr: "pipe",
+              });
+              
+              if (verifyResult.exitCode === 0) {
+                console.log(`   ✅ Signature verified`);
+              } else {
+                console.warn(`   ⚠️  Signature verification failed`);
+              }
+            } else {
+              console.error(`   ❌ Code signing failed:`);
+              console.error(codesignResult.stderr.toString());
+            }
+          }
+          
           // Delete standalone binary (we only need the .app)
           try {
             await Bun.write(outfile, ""); // Clear file
