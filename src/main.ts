@@ -3,7 +3,7 @@
 // 👉 Edit your app in src/frontend/ and src/backend/
 
 import { Webview, SizeHint } from "webview-bun";
-import { htmlContent, htmlPath } from "./embedded-html";
+import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../hive.config";
 import { registerBindings } from "./backend/bindings";
 import { AssetServer } from "../lib/asset-server";
@@ -30,61 +30,78 @@ async function main() {
 
   // Check if asset server mode is enabled
   if (htmlPath === "ASSET_SERVER") {
-    // Asset Server Mode: Serve all files via HTTP (no size limits!)
+    // Asset Server Mode: Serve embedded assets via HTTP (no size limits!)
     const server = new AssetServer();
     
-    // Load assets from src/frontend directory
-    const assetDir = "./src/frontend";
-    const indexExists = await Bun.file(`${assetDir}/index.html`).exists();
-    
-    if (!indexExists) {
-      throw new Error("No index.html found in src/frontend/");
+    // Load assets from embedded files (bundled in binary)
+    if (!embeddedAssets || Object.keys(embeddedAssets).length === 0) {
+      throw new Error("No embedded assets found! Run 'bun run build:frontend' first.");
     }
     
-    await server.addDirectory(assetDir, "/");
-    await server.start(0);
+    // Add all embedded assets in PARALLEL (much faster!)
+    const assetEntries = Object.entries(embeddedAssets);
+    await Promise.all(
+      assetEntries.map(([path, filePath]) => server.addAsset(path, filePath))
+    );
     
+    await server.start(0);
     const serverURL = server.getURL();
     
-    // Fetch HTML and inline all assets (NO HTTP requests from Webview!)
+    // Fetch HTML
     let html = await fetch(`${serverURL}/index.html`).then(r => r.text());
     
-    // Find and inline all CSS files
-    const cssMatches = html.matchAll(/<link[^>]*href=["']([^"']+\.css)["'][^>]*>/gi);
-    for (const match of cssMatches) {
-      const cssPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
-      const cssContent = await fetch(`${serverURL}/${cssPath}`).then(r => r.text());
-      html = html.replace(match[0], `<style>${cssContent}</style>`);
-    }
+    // Find all CSS and JS/TS files FIRST (avoid regex in loop)
+    const cssMatches = Array.from(html.matchAll(/<link[^>]*href=["']([^"']+\.css)["'][^>]*>/gi));
+    const jsMatches = Array.from(html.matchAll(/<script[^>]*src=["']([^"']+\.(js|ts))["'][^>]*><\/script>/gi));
     
-    // Find and inline all JS/TS files (transpile TS to JS)
-    const jsMatches = html.matchAll(/<script[^>]*src=["']([^"']+\.(js|ts))["'][^>]*><\/script>/gi);
-    for (const match of jsMatches) {
-      const jsPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
-      let jsContent = await fetch(`${serverURL}/${jsPath}`).then(r => r.text());
-      
-      // Transpile TypeScript to JavaScript if needed
-      if (jsPath.endsWith('.ts')) {
-        const transpiled = await Bun.build({
-          entrypoints: [`./src/frontend/${jsPath}`],
-          target: 'browser',
-          format: 'esm',
-          minify: false,
-        });
+    // Fetch all CSS files in PARALLEL
+    const cssContents = await Promise.all(
+      cssMatches.map(match => {
+        const cssPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
+        return fetch(`${serverURL}/${cssPath}`).then(r => r.text());
+      })
+    );
+    
+    // Replace CSS files with inlined styles
+    cssMatches.forEach((match, i) => {
+      html = html.replace(match[0], `<style>${cssContents[i]}</style>`);
+    });
+    
+    // Create single transpiler instance (reuse for all files)
+    const transpiler = new Bun.Transpiler({
+      loader: 'ts',
+      target: 'browser',
+    });
+    
+    // Fetch all JS/TS files in PARALLEL
+    const jsContents = await Promise.all(
+      jsMatches.map(async (match) => {
+        const jsPath = match[1].startsWith('/') ? match[1].substring(1) : match[1];
+        let jsContent = await fetch(`${serverURL}/${jsPath}`).then(r => r.text());
         
-        if (transpiled.success && transpiled.outputs.length > 0) {
-          jsContent = await transpiled.outputs[0].text();
+        // Transpile TypeScript if needed
+        if (jsPath.endsWith('.ts')) {
+          jsContent = transpiler.transformSync(jsContent);
         }
-      }
-      
-      const moduleAttr = match[0].includes('type="module"') ? ' type="module"' : '';
-      html = html.replace(match[0], `<script${moduleAttr}>${jsContent}</script>`);
-    }
+        
+        return jsContent;
+      })
+    );
     
-    console.log("✅ Inlined all CSS and JS assets");
+    // Replace JS/TS files with inlined scripts
+    jsMatches.forEach((match, i) => {
+      const moduleAttr = match[0].includes('type="module"') ? ' type="module"' : '';
+      html = html.replace(match[0], `<script${moduleAttr}>${jsContents[i]}</script>`);
+    });
     
     // Inject HTML (preserves bindings!)
     webview.setHTML(html);
+    
+    // Run webview (blocking - returns when window closes)
+    webview.run();
+    
+    // Clean up: Stop asset server after webview closes
+    server.stop();
     
   } else {
     // Fallback: Embedded mode (if asset server disabled)
@@ -98,13 +115,13 @@ async function main() {
     );
 
     webview.setHTML(finalHTML);
+    
+    // Run webview (blocking - returns when window closes)
+    webview.run();
   }
 
-  // Run webview (blocking - returns when window closes)
-  webview.run();
-
   // webview.run() blocks until window is closed
-  // No need for process.exit() - process ends naturally
+  // Process ends naturally after this
 }
 
 // Start immediately

@@ -72,8 +72,6 @@ export class AssetServer {
         const url = new URL(req.url);
         let path = url.pathname;
 
-        console.log(`📥 Request: ${path}`);
-
         // Default to index.html for root
         if (path === "/" || path === "") {
           path = "/index.html";
@@ -82,7 +80,6 @@ export class AssetServer {
         const asset = this.assets.get(path);
 
         if (asset) {
-          console.log(`✅ Serving: ${path} (${asset.type})`);
           return new Response(asset.content, {
             headers: {
               "Content-Type": asset.type,
@@ -96,7 +93,6 @@ export class AssetServer {
         const htmlPath = `${path}.html`;
         const htmlAsset = this.assets.get(htmlPath);
         if (htmlAsset) {
-          console.log(`✅ Serving: ${htmlPath} (${htmlAsset.type})`);
           return new Response(htmlAsset.content, {
             headers: {
               "Content-Type": htmlAsset.type,
@@ -105,8 +101,6 @@ export class AssetServer {
           });
         }
 
-        console.log(`❌ Not found: ${path}`);
-        console.log(`   Available assets: ${Array.from(this.assets.keys()).slice(0, 5).join(", ")}...`);
         return new Response(`Not Found: ${path}`, { status: 404 });
       },
     });

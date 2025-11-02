@@ -33,9 +33,11 @@ export default {
     outdir: "dist",     // Output directory
     outfile: "hive",    // Executable name
     
-    // Frontend build mode (asset server = no limits!)
+    // Frontend build mode
     frontend: {
-      assetServer: true,  // Serve assets via HTTP (supports large files, images, audio, etc.)
+      // Asset server: Embeds all files in binary, serves via HTTP at runtime
+      // NO SIZE LIMITS! Works in dev AND production! 🚀
+      assetServer: true,
     },
     
     // Platform-specific settings

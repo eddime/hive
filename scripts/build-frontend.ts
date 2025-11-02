@@ -5,17 +5,38 @@ const useAssetServer = config.build?.frontend?.assetServer !== false; // Default
 console.log(`📦 Building frontend (${useAssetServer ? "asset server" : "embedded"} mode)...`);
 
 if (useAssetServer) {
-  // Asset Server mode: No bundling, serve all files via HTTP
+  // Asset Server mode: Just use source files directly!
+  // Bun will handle transpilation when bundling the binary
+  const glob = new Bun.Glob("**/*");
+  const files = await Array.fromAsync(glob.scan({ cwd: "./src/frontend", onlyFiles: true }));
+  
+  // Generate import statements for source files
+  const imports = files
+    .map((file, idx) => `import asset${idx} from "../src/frontend/${file}" with { type: "file" };`)
+    .join("\n");
+  
+  // Generate assets map
+  const assetsMap = files
+    .map((file, idx) => `  "/${file}": asset${idx}`)
+    .join(",\n");
+  
   const embeddedHtmlTs = `// Auto-generated - Asset Server mode
+${imports}
+
 export const htmlContent = null;
-export const htmlPath = "ASSET_SERVER"; // Signals to use asset server
+export const htmlPath = "ASSET_SERVER";
+
+// Embedded assets (bundled in binary)
+export const embeddedAssets: Record<string, string> = {
+${assetsMap}
+};
 `;
   await Bun.write("./src/embedded-html.ts", embeddedHtmlTs);
   
   console.log("✅ Asset server enabled!");
-  console.log("   🌐 All files served via HTTP (no size limits)");
-  console.log("   📂 Place your frontend in src/frontend/");
-  console.log("   ✨ Supports: HTML, JS, CSS, images, audio, fonts, etc.");
+  console.log(`   📦 Embedded ${files.length} assets in binary`);
+  console.log("   🌐 Will be served via HTTP at runtime");
+  console.log("   ✨ NO SIZE LIMITS!");
 
 } else {
   // Embedded mode: Inline everything (for small apps)
