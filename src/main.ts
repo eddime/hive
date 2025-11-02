@@ -19,6 +19,21 @@ async function main() {
 
   webview.title = config.window.title;
 
+  // Set window icon (via favicon)
+  let faviconBase64 = "";
+  try {
+    const iconPath = process.platform === "darwin" ? "assets/icon.png" : 
+                     process.platform === "win32" ? "assets/icon.ico" : 
+                     "assets/icon.png";
+    const iconFile = Bun.file(iconPath);
+    if (await iconFile.exists()) {
+      const iconBuffer = await iconFile.arrayBuffer();
+      faviconBase64 = Buffer.from(iconBuffer).toString('base64');
+    }
+  } catch (e) {
+    // Icon not found, skip
+  }
+
   // Register bindings FIRST (before navigate!)
   registerBindings(webview);
   
@@ -27,40 +42,64 @@ async function main() {
 
   // Check if asset server mode is enabled
   if (htmlPath === "ASSET_SERVER") {
-    // FINAL SOLUTION: Background server + setHTML + <base> tag!
-    // Server runs in separate process so it can handle requests even when webview.run() blocks!
+    // FINAL SOLUTION: Background AssetServer (via Worker) + setHTML + <base> tag!
+    // Worker runs in separate thread so server can handle requests even when webview.run() blocks!
     
     // Load assets from embedded files
     if (!embeddedAssets || Object.keys(embeddedAssets).length === 0) {
       throw new Error("No embedded assets found! Run 'bun run build:frontend' first.");
     }
     
-    // Start AssetServer in background process
+    // Create worker code (works in both dev and production!)
+    // Import AssetServer in main thread and pass the class to worker
     const assetsJSON = JSON.stringify(Object.fromEntries(Object.entries(embeddedAssets)));
-    const serverProcess = Bun.spawn(["bun", "run", "lib/asset-server-worker.ts", assetsJSON], {
-      stdout: "pipe",
-      stderr: "inherit",
-    });
     
-    // Wait for server to be ready and get URL
-    const reader = serverProcess.stdout.getReader();
+    // Import AssetServer class definition as string
+    const AssetServerCode = await Bun.file("lib/asset-server.ts").text();
+    
+    const workerCode = `
+// Inline AssetServer code
+${AssetServerCode}
+
+declare var self: Worker;
+
+const assets = JSON.parse('${assetsJSON.replace(/'/g, "\\'")}');
+const server = new AssetServer();
+
+(async () => {
+  for (const [path, filePath] of Object.entries(assets)) {
+    await server.addAsset(path as string, filePath as string);
+  }
+  
+  await server.start(0);
+  const url = server.getURL();
+  
+  self.postMessage({ type: 'ready', url });
+  
+  self.addEventListener('message', (event) => {
+    if (event.data === 'stop') {
+      server.stop();
+      process.exit(0);
+    }
+  });
+})();
+    `;
+    
+    // Create blob URL and worker
+    const blob = new Blob([workerCode], { type: "application/typescript" });
+    const workerURL = URL.createObjectURL(blob);
+    const worker = new Worker(workerURL);
+    
+    // Wait for worker to be ready and get URL
     let serverURL = "";
-    
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      
-      const text = new TextDecoder().decode(value);
-      const match = text.match(/SERVER_READY:(.+)/);
-      if (match) {
-        serverURL = match[1].trim();
-        break;
-      }
-    }
-    
-    if (!serverURL) {
-      throw new Error("Failed to start AssetServer!");
-    }
+    await new Promise<void>((resolve) => {
+      worker.onmessage = (event) => {
+        if (event.data.type === 'ready') {
+          serverURL = event.data.url;
+          resolve();
+        }
+      };
+    });
     
     const entryPoint = config.build.frontend.entryPoint || "index.html";
     const entryPath = entryPoint.startsWith('/') ? entryPoint : `/${entryPoint}`;
@@ -69,10 +108,11 @@ async function main() {
     // Fetch the HTML
     const html = await fetch(`${serverURL}${entryPath}`).then(r => r.text());
     
-    // Inject <base> tag to make ALL relative URLs point to HTTP server!
+    // Inject <base> tag and favicon to make ALL relative URLs point to HTTP server!
+    const faviconTag = faviconBase64 ? `<link rel="icon" type="image/png" href="data:image/png;base64,${faviconBase64}">` : '';
     const htmlWithBase = html.replace(
       /<head>/i,
-      `<head><base href="${baseURL}">`
+      `<head><base href="${baseURL}">${faviconTag}`
     );
     
     if (config.window.debug) {
@@ -93,8 +133,8 @@ async function main() {
     webview.run();
     
     // Clean up
-    serverProcess.kill();
-    await serverProcess.exited;
+    worker.postMessage('stop');
+    worker.terminate();
     
   } else {
     // Fallback: Embedded mode (if asset server disabled)
@@ -102,7 +142,12 @@ async function main() {
       throw new Error("No HTML content found!");
     }
 
-    const finalHTML = htmlContent.replace(
+    const faviconTag = faviconBase64 ? `<link rel="icon" type="image/png" href="data:image/png;base64,${faviconBase64}">` : '';
+    let finalHTML = htmlContent.replace(
+      /<head>/i,
+      `<head>${faviconTag}`
+    );
+    finalHTML = finalHTML.replace(
       /<script>/,
       `<script>window.BUN_VERSION="${Bun.version}";${fullscreenScript}`
     );

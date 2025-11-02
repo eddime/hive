@@ -118,12 +118,10 @@ if (exitCode === 0) {
         await Bun.write(`${resourcesPath}/icon.icns`, iconFile);
         await Bun.write(`${macosPath}/libwebview.dylib`, Bun.file(libDest));
         
-        // Create launcher script that sets DYLD_LIBRARY_PATH and working directory
+        // Create launcher script that sets DYLD_LIBRARY_PATH
         const launcher = `#!/bin/bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
 export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
-# Set working directory to Resources (where app data would be)
-cd "$DIR/../Resources" 2>/dev/null || cd "$DIR"
 exec "$DIR/${appName}-bin" "$@"
 `;
         await Bun.write(`${macosPath}/${appName}`, launcher);
