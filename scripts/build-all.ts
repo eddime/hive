@@ -163,6 +163,28 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
       }
     }
     
+    // Copy webview library for Windows and Linux (macOS is handled in .app bundle above)
+    if (target.platform === "windows") {
+      const libSource = `node_modules/webview-bun/build/libwebview.dll`;
+      const libDest = `${config.build.outdir}/libwebview.dll`;
+      try {
+        await Bun.write(libDest, Bun.file(libSource));
+        console.log(`   📚 libwebview.dll copied`);
+      } catch (e) {
+        console.warn(`   ⚠️  Failed to copy libwebview.dll:`, e);
+      }
+    } else if (target.platform === "linux") {
+      const libName = `libwebview-${target.arch}.so`;
+      const libSource = `node_modules/webview-bun/build/${libName}`;
+      const libDest = `${config.build.outdir}/${libName}`;
+      try {
+        await Bun.write(libDest, Bun.file(libSource));
+        console.log(`   📚 ${libName} copied`);
+      } catch (e) {
+        console.warn(`   ⚠️  Failed to copy ${libName}:`, e);
+      }
+    }
+    
     // For macOS builds, use .app path in results if bundle was created
     const finalPath = target.platform === "darwin" && config.build.macos?.createAppBundle !== false
       ? `${config.build.outdir}/${config.build.outfile}-${target.platform}-${target.arch}.app`
