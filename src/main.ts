@@ -331,14 +331,24 @@ const server = new AssetServer();
     if (event.data === 'stop') {
       server.stop();
       process.exit(0);
-    } else if (event.data.type === 'updateHTML') {
-      // Update HTML in cache for game mode
-      const content = new TextEncoder().encode(event.data.content);
-      server.cache.set(event.data.path, {
-        content,
-        lastUsed: Date.now()
-      });
-      console.log('🔄 HTML updated in cache:', event.data.path);
+    } else if (event.data.type === 'replaceHTML') {
+      // Replace HTML content in assetPaths AND cache
+      const path = event.data.path;
+      const content = event.data.content;
+      const contentBytes = new TextEncoder().encode(content);
+      
+      // Update in assetPaths (for future loads)
+      const assetMeta = server.assetPaths.get(path);
+      if (assetMeta) {
+        // Store modified content directly
+        server.cache.set(path, {
+          content: contentBytes,
+          lastUsed: Date.now()
+        });
+        console.log('✅ HTML replaced in asset server:', path, contentBytes.length, 'bytes');
+      } else {
+        console.warn('⚠️  Asset not found:', path);
+      }
     }
   });
 })();
@@ -521,20 +531,21 @@ const server = new AssetServer();
     const hasCrossOriginScripts = html.includes('crossorigin=');
     
     if (hasCrossOriginScripts) {
-      // Game mode: Update HTML on asset server and navigate
+      // Game mode: Serve modified HTML directly from asset server
       console.log("🎮 Game detected - using navigate() for CORS support");
       
-      // Tell worker to update the HTML with our modifications
+      // Tell worker to replace the HTML in asset paths
       worker.postMessage({
-        type: 'updateHTML',
+        type: 'replaceHTML',
         path: entryPath,
         content: finalHTML
       });
       
-      // Wait a bit for update
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for worker to process the replacement
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Navigate to the server URL (proper origin for CORS)
+      // This will fetch the MODIFIED HTML from the asset server
       webview.navigate(`${serverURL}${entryPath}`);
     } else {
       // Normal app mode: Use setHTML (bindings work instantly)
