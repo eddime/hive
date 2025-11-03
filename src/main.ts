@@ -62,12 +62,23 @@ async function main() {
   registerBindings(webview);
   
   // Test binding to verify bindings work
-  if (config.window.debug) {
-    webview.bind("__test", (args: string) => {
-      console.log("🔧 Test binding called with:", args);
-      return JSON.stringify({ success: true, echo: args });
+    // Log to file binding (for Windows console capture)
+    webview.bind("__logToFile", (args: string) => {
+      try {
+        const logData = JSON.parse(args);
+        debugLog(`[JS ${logData.level.toUpperCase()}] ${logData.msg}`);
+      } catch (e) {
+        debugLog(`[JS] ${args}`);
+      }
+      return "ok";
     });
-  }
+    
+    if (config.window.debug) {
+      webview.bind("__test", (args: string) => {
+        console.log("🔧 Test binding called with:", args);
+        return JSON.stringify({ success: true, echo: args });
+      });
+    }
 
   // Wait for icon to finish loading
   const faviconBase64 = await iconPromise;
@@ -529,21 +540,52 @@ const server = new AssetServer();
       });
     `.trim();
     
-    // Error catcher for Windows debugging
-    const errorCatcher = `
+    // Console Logger + Error catcher for Windows debugging
+    const consoleLogger = `
+      // Hijack console to send logs to backend
+      const originalConsole = {
+        log: console.log,
+        error: console.error,
+        warn: console.warn,
+        info: console.info
+      };
+      
+      const sendLog = (level, ...args) => {
+        const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+        originalConsole[level](...args); // Keep original console
+        
+        // Send to backend if binding exists
+        if (window.__logToFile) {
+          try {
+            window.__logToFile(JSON.stringify({ level, msg }));
+          } catch (e) {
+            // Ignore if binding not available
+          }
+        }
+      };
+      
+      console.log = (...args) => sendLog('log', ...args);
+      console.error = (...args) => sendLog('error', ...args);
+      console.warn = (...args) => sendLog('warn', ...args);
+      console.info = (...args) => sendLog('info', ...args);
+      
       window.addEventListener('error', (e) => {
         console.error('❌ JS Error:', e.message, 'at', e.filename, 'line', e.lineno);
       });
       window.addEventListener('unhandledrejection', (e) => {
         console.error('❌ Promise rejection:', e.reason);
+        console.error('   Stack:', e.reason?.stack || 'No stack trace');
+        console.error('   Promise:', e.promise);
+        e.preventDefault(); // Prevent default handling
       });
-      console.log('✅ Error catchers installed');
+      
+      console.log('✅ Console logger + error catchers installed');
     `.trim();
     
     // Inject JS utilities
     const finalHTML = htmlWithBase.replace(
       /<\/head>/i,
-      `<script>${errorCatcher} ${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
+      `<script>${consoleLogger} ${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
     );
 
     // For games with external scripts (crossorigin), use navigate instead of setHTML
