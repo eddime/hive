@@ -253,19 +253,9 @@ class AssetServer {
     return \`http://localhost:\${this.port}\`;
   }
 
-  stop(force = false) {
+  stop() {
     if (this.server) {
-      try {
-        this.server.stop(force);
-        this.server = null;
-      } catch (e) {
-        console.error('Failed to stop server:', e);
-      }
-    }
-    // Clear all caches
-    if (this.cache) {
-      this.cache.clear();
-      this.cacheSize = 0;
+      this.server.stop();
     }
   }
 
@@ -339,18 +329,7 @@ const server = new AssetServer();
   
   self.addEventListener('message', (event) => {
     if (event.data === 'stop') {
-      try {
-        // Force stop server
-        if (server && server.stop) {
-          server.stop(true); // Force close
-        }
-        // Clear cache
-        if (server && server.cache) {
-          server.cache.clear();
-        }
-      } catch (e) {
-        console.error('Server cleanup error:', e);
-      }
+      server.stop();
       process.exit(0);
     } else if (event.data.type === 'updateHTML') {
       // Update HTML in cache for game mode
@@ -565,32 +544,9 @@ const server = new AssetServer();
     // Run webview (blocking - returns when window closes)
     webview.run();
     
-    // Clean up - Force stop server and terminate worker
-    const cleanup = async () => {
-      try {
-        worker.postMessage('stop');
-        // Give worker time to cleanup
-        await new Promise(resolve => setTimeout(resolve, 100));
-        worker.terminate();
-      } catch (e) {
-        console.error("Worker cleanup error:", e);
-      }
-    };
-    
-    await cleanup();
-    
-    // Handle process termination signals
-    process.on('SIGINT', async () => {
-      console.log('\n👋 Shutting down...');
-      await cleanup();
-      process.exit(0);
-    });
-    
-    process.on('SIGTERM', async () => {
-      console.log('\n👋 Shutting down...');
-      await cleanup();
-      process.exit(0);
-    });
+    // Clean up
+    worker.postMessage('stop');
+    worker.terminate();
     
   } else {
     // Fallback: Embedded mode (if asset server disabled)
