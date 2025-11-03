@@ -97,6 +97,6 @@ if (cmd.action) {
     stdin: "inherit",
   });
   await proc.exited;
-  process.exit(proc.exitCode || 0);
+  process.exit(proc.exitCode ?? 0);
 }
 

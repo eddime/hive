@@ -238,6 +238,38 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
       } catch (e) {
         console.warn(`   ⚠️  Failed to copy libwebview.dll:`, e);
       }
+      
+      // Auto-apply icon with rcedit if cross-compiling (macOS/Linux → Windows)
+      if (process.platform !== "win32" && config.build.windows?.icon) {
+        console.log(`   🎨 Applying icon with rcedit...`);
+        
+        // Check if rcedit is available
+        const rceditCheck = Bun.spawnSync(["which", "rcedit"], {
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        
+        if (rceditCheck.exitCode === 0) {
+          const rceditResult = Bun.spawnSync([
+            "rcedit",
+            outfile,
+            "--set-icon",
+            config.build.windows.icon
+          ], {
+            stdout: "pipe",
+            stderr: "pipe",
+          });
+          
+          if (rceditResult.exitCode === 0) {
+            console.log(`   ✅ Icon applied successfully`);
+          } else {
+            console.warn(`   ⚠️  rcedit failed: ${rceditResult.stderr.toString()}`);
+          }
+        } else {
+          console.log(`   💡 rcedit not found - install with: npm install -g rcedit`);
+          console.log(`   ℹ️  Or build on Windows for automatic icon embedding`);
+        }
+      }
     } else if (target.platform === "linux") {
       const libName = `libwebview-${target.arch}.so`;
       const libSource = `node_modules/webview-bun/build/${libName}`;

@@ -256,6 +256,39 @@ exec "$DIR/${appName}-bin" "$@"
     }
   }
   
+  // Auto-apply icon with rcedit if cross-compiling to Windows (macOS/Linux → Windows)
+  const isWindowsBuild = outfile.endsWith(".exe");
+  if (isWindowsBuild && process.platform !== "win32" && config.build.windows?.icon) {
+    console.log(`\n🎨 Applying icon with rcedit...`);
+    
+    // Check if rcedit is available
+    const rceditCheck = Bun.spawnSync(["which", "rcedit"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    
+    if (rceditCheck.exitCode === 0) {
+      const rceditResult = Bun.spawnSync([
+        "rcedit",
+        outfile,
+        "--set-icon",
+        config.build.windows.icon
+      ], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      
+      if (rceditResult.exitCode === 0) {
+        console.log(`   ✅ Icon applied successfully`);
+      } else {
+        console.warn(`   ⚠️  rcedit failed: ${rceditResult.stderr.toString()}`);
+      }
+    } else {
+      console.log(`   💡 rcedit not found - install with: npm install -g rcedit`);
+      console.log(`   ℹ️  Or build on Windows for automatic icon embedding`);
+    }
+  }
+  
   console.log(`\n✅ Build successful in ${buildTime}s!`);
   if (process.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
     console.log(`   📦 ${config.build.outdir}/${config.app.name}.app`);
