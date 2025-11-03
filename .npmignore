@@ -1,0 +1,54 @@
+# Build artifacts
+dist/
+*.app
+*.exe
+*.dmg
+*.deb
+*.rpm
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Logs & Debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test files
+test/
+tests/
+*.test.ts
+*.spec.ts
+
+# Documentation (keep only essential)
+CODESIGNING.md
+PROJECT_OVERVIEW.md
+WINDOWS_ICON.md
+.github-readme-optimization.md
+
+# Generated files
+src/embedded-html.ts
+
+# Dependencies (users will install their own)
+node_modules/
+bun.lockb
+bun.lock
+
+# Build temp files
+.commit-msg.txt
+

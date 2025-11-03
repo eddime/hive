@@ -3,9 +3,55 @@
   "version": "1.0.0",
   "description": "🥐 Bake your desktop apps with Bun + Webview",
   "type": "module",
+  "main": "./cli.ts",
+  "bin": {
+    "bunery": "./cli.ts",
+    "bake": "./cli.ts"
+  },
+  "files": [
+    "cli.ts",
+    "scripts/**/*.ts",
+    "lib/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.html",
+    "src/**/*.css",
+    "assets/**/*",
+    "bunery.config.ts",
+    "entitlements.plist",
+    "README.md",
+    "LICENSE",
+    "BINDINGS.md",
+    "GETTING_STARTED.md"
+  ],
   "author": "Edgar Metzler",
   "license": "MIT",
-  "keywords": ["bun", "webview", "desktop", "bunery", "bake", "tauri-alternative", "electron-alternative"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eddime/bunery.git"
+  },
+  "homepage": "https://github.com/eddime/bunery#readme",
+  "bugs": {
+    "url": "https://github.com/eddime/bunery/issues"
+  },
+  "keywords": [
+    "bun",
+    "webview",
+    "desktop",
+    "desktop-app",
+    "cross-platform",
+    "bunery",
+    "bake",
+    "tauri-alternative",
+    "electron-alternative",
+    "lightweight",
+    "native",
+    "macos",
+    "windows",
+    "linux"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
   "scripts": {
     "start": "bun run scripts/dev.ts",
     "dev": "bun run scripts/dev.ts",
