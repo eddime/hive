@@ -30,15 +30,6 @@ async function main() {
     return "";
   })();
 
-  // Windows: Fix WebGL context creation failure
-  if (process.platform === "win32" && config.window.windowsGPU) {
-    // Windows WebView2 sandbox issue: GPU process fails to initialize
-    // Solution from Microsoft docs: Disable GPU entirely, use software rendering
-    process.env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--disable-gpu";
-    
-    console.log("🎮 Windows: GPU disabled (software WebGL rendering)");
-  }
-  
   // Create webview (parallel with icon loading)
   const webview = new Webview(config.window.debug, {
     width: config.window.width,
