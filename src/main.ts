@@ -522,37 +522,33 @@ const server = new AssetServer();
       `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
     );
 
-    // For games: Use navigate() for proper origin (fixes localStorage, WebGL, WASM)
-    // Bindings are preserved if registered BEFORE navigate!
-    const hasCrossOriginScripts = html.includes('crossorigin=');
+    // CRITICAL: Use navigate() for WebGL/WASM/localStorage support
+    // setHTML() uses 'about:blank' origin which has security restrictions
+    // navigate() uses 'http://localhost' origin which is a proper origin
+    console.log("🎮 Using navigate() for proper HTTP origin (required for WebGL on Windows)");
     
-    if (hasCrossOriginScripts) {
-      console.log("🎮 Game mode: Using navigate() for proper origin");
-      
-      // Inject modified HTML into asset server
-      worker.postMessage({
-        type: 'injectHTML',
-        path: entryPath,
-        html: finalHTML
-      });
-      
-      // Wait for confirmation
-      await new Promise<void>((resolve) => {
-        const handler = (event: MessageEvent) => {
-          if (event.data.type === 'htmlInjected' && event.data.path === entryPath) {
-            worker.removeEventListener('message', handler);
-            resolve();
-          }
-        };
-        worker.addEventListener('message', handler);
-      });
-      
-      // Now navigate - will load our modified HTML!
-      webview.navigate(`${serverURL}${entryPath}`);
-    } else {
-      console.log("📱 App mode: Using setHTML()");
-      webview.setHTML(finalHTML);
-    }
+    // Inject modified HTML into asset server cache FIRST
+    worker.postMessage({
+      type: 'injectHTML',
+      path: entryPath,
+      html: finalHTML
+    });
+    
+    // Wait for HTML injection confirmation
+    await new Promise<void>((resolve) => {
+      const handler = (event: MessageEvent) => {
+        if (event.data.type === 'htmlInjected' && event.data.path === entryPath) {
+          worker.removeEventListener('message', handler);
+          resolve();
+        }
+      };
+      worker.addEventListener('message', handler);
+    });
+    
+    console.log(`📍 Navigating to: ${serverURL}${entryPath}`);
+    
+    // Navigate to the HTTP URL (proper origin = WebGL works!)
+    webview.navigate(`${serverURL}${entryPath}`);
     
     // Run webview (blocking - returns when window closes)
     webview.run();
