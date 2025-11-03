@@ -10,9 +10,28 @@ import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../bunery.config";
 import { registerBindings } from "./backend/bindings";
 import { AssetServer } from "../lib/asset-server";
+import { appendFileSync } from "fs";
+
+// Windows Debug Logger (writes to file since console is hidden)
+const isWindows = process.platform === "win32";
+const debugLog = (msg: string) => {
+  console.log(msg); // Still log to console for dev mode
+  if (isWindows && config.build.windows?.hideConsole) {
+    try {
+      appendFileSync("bunery-debug.log", `${new Date().toISOString()} - ${msg}\n`);
+    } catch (e) {
+      // Ignore if can't write
+    }
+  }
+};
 
 // Main entry - optimized for speed
 async function main() {
+  try {
+    debugLog("🥐 Bunery starting...");
+    debugLog(`Platform: ${process.platform}, Arch: ${process.arch}`);
+    debugLog(`Working directory: ${process.cwd()}`);
+    
   // 🚀 PERFORMANCE: Load icon in parallel with webview creation
   const iconPromise = (async () => {
     try {
@@ -67,8 +86,8 @@ async function main() {
     }
     
     if (config.window.debug) {
-      console.log(`📦 Embedded assets: ${Object.keys(embeddedAssets).length} files`);
-      console.log(`📝 Assets:`, Object.keys(embeddedAssets).join(", "));
+      debugLog(`📦 Embedded assets: ${Object.keys(embeddedAssets).length} files`);
+      debugLog(`📝 Assets: ${Object.keys(embeddedAssets).join(", ")}`);
     }
     
     // Create worker code (works in both dev and production!)
@@ -368,17 +387,17 @@ const server = new AssetServer();
     const baseURL = `${serverURL}${entryPoint.includes('/') ? '/' + entryPoint.substring(0, entryPoint.lastIndexOf('/') + 1) : '/'}`;
     
     if (config.window.debug) {
-      console.log(`📄 Entry point: ${entryPath}`);
-      console.log(`🔗 Base URL: ${baseURL}`);
-      console.log(`🌐 Fetching HTML from: ${serverURL}${entryPath}`);
+      debugLog(`📄 Entry point: ${entryPath}`);
+      debugLog(`🔗 Base URL: ${baseURL}`);
+      debugLog(`🌐 Fetching HTML from: ${serverURL}${entryPath}`);
     }
     
     // Fetch the HTML
     const html = await fetch(`${serverURL}${entryPath}`).then(r => r.text());
     
     if (config.window.debug) {
-      console.log(`✅ HTML fetched: ${html.length} bytes`);
-      console.log(`📝 HTML preview: ${html.substring(0, 200)}...`);
+      debugLog(`✅ HTML fetched: ${html.length} bytes`);
+      debugLog(`📝 HTML preview: ${html.substring(0, 200)}...`);
     }
     
     // Inject <base> tag and favicon to make ALL relative URLs point to HTTP server!
@@ -510,10 +529,21 @@ const server = new AssetServer();
       });
     `.trim();
     
+    // Error catcher for Windows debugging
+    const errorCatcher = `
+      window.addEventListener('error', (e) => {
+        console.error('❌ JS Error:', e.message, 'at', e.filename, 'line', e.lineno);
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        console.error('❌ Promise rejection:', e.reason);
+      });
+      console.log('✅ Error catchers installed');
+    `.trim();
+    
     // Inject JS utilities
     const finalHTML = htmlWithBase.replace(
       /<\/head>/i,
-      `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
+      `<script>${errorCatcher} ${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
     );
 
     // For games with external scripts (crossorigin), use navigate instead of setHTML
@@ -522,7 +552,7 @@ const server = new AssetServer();
     
     if (hasCrossOriginScripts) {
       // Game mode: Update HTML on asset server and navigate
-      console.log("🎮 Game detected - using navigate() for CORS support");
+      debugLog("🎮 Game detected - using navigate() for CORS support");
       
       // Tell worker to update the HTML with our modifications
       worker.postMessage({
@@ -535,14 +565,21 @@ const server = new AssetServer();
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Navigate to the server URL (proper origin for CORS)
+      debugLog(`📍 Navigating to: ${serverURL}${entryPath}`);
       webview.navigate(`${serverURL}${entryPath}`);
+      debugLog("✅ Navigate called - webview should load now");
     } else {
       // Normal app mode: Use setHTML (bindings work instantly)
+      debugLog("📄 Using setHTML for non-game content");
       webview.setHTML(finalHTML);
     }
     
+    debugLog("🚀 Starting webview.run()");
+    
     // Run webview (blocking - returns when window closes)
     webview.run();
+    
+    debugLog("👋 Webview closed");
     
     // Clean up
     worker.postMessage('stop');
@@ -572,6 +609,11 @@ const server = new AssetServer();
 
   // webview.run() blocks until window is closed
   // Process ends naturally after this
+  } catch (error) {
+    debugLog(`❌ Fatal error: ${error}`);
+    debugLog(`Stack: ${error.stack}`);
+    throw error;
+  }
 }
 
 // Start immediately
@@ -579,5 +621,9 @@ try {
   await main();
 } catch (error) {
   console.error("Fatal error:", error);
+  debugLog(`❌ CRASH: ${error}`);
+  if (error.stack) {
+    debugLog(`Stack trace: ${error.stack}`);
+  }
   process.exit(1);
 }
