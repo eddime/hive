@@ -331,24 +331,6 @@ const server = new AssetServer();
     if (event.data === 'stop') {
       server.stop();
       process.exit(0);
-    } else if (event.data.type === 'replaceHTML') {
-      // Replace HTML content in assetPaths AND cache
-      const path = event.data.path;
-      const content = event.data.content;
-      const contentBytes = new TextEncoder().encode(content);
-      
-      // Update in assetPaths (for future loads)
-      const assetMeta = server.assetPaths.get(path);
-      if (assetMeta) {
-        // Store modified content directly
-        server.cache.set(path, {
-          content: contentBytes,
-          lastUsed: Date.now()
-        });
-        console.log('✅ HTML replaced in asset server:', path, contentBytes.length, 'bytes');
-      } else {
-        console.warn('⚠️  Asset not found:', path);
-      }
     }
   });
 })();
@@ -531,21 +513,11 @@ const server = new AssetServer();
     const hasCrossOriginScripts = html.includes('crossorigin=');
     
     if (hasCrossOriginScripts) {
-      // Game mode: Serve modified HTML directly from asset server
+      // Game mode: Use navigate() for proper CORS
       console.log("🎮 Game detected - using navigate() for CORS support");
       
-      // Tell worker to replace the HTML in asset paths
-      worker.postMessage({
-        type: 'replaceHTML',
-        path: entryPath,
-        content: finalHTML
-      });
-      
-      // Wait for worker to process the replacement
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Navigate to the server URL (proper origin for CORS)
-      // This will fetch the MODIFIED HTML from the asset server
+      // Asset server will inject scripts dynamically on first HTML request
+      // No worker messages needed - cleaner and faster!
       webview.navigate(`${serverURL}${entryPath}`);
     } else {
       // Normal app mode: Use setHTML (bindings work instantly)

@@ -19,8 +19,19 @@ if (useAssetServer) {
     const filePath = `./src/frontend/${file}`;
     let fileContent: ArrayBuffer;
     
+    // HTML files: Inject Bunery runtime scripts
+    if (file.endsWith('.html')) {
+      let htmlContent = await Bun.file(filePath).text();
+      
+      // Inject binding placeholder that main.ts will populate
+      const runtimeScript = `<script id="bunery-runtime">/* Bunery runtime injected at build */</script>`;
+      htmlContent = htmlContent.replace(/<\/head>/i, `${runtimeScript}\n</head>`);
+      
+      fileContent = new TextEncoder().encode(htmlContent).buffer;
+      console.log(`   🥐 Processed: ${file} (Bunery runtime marker)`);
+    }
     // Transpile TypeScript files to JavaScript
-    if (file.endsWith('.ts') || file.endsWith('.tsx')) {
+    else if (file.endsWith('.ts') || file.endsWith('.tsx')) {
       const sourceCode = await Bun.file(filePath).text();
       const jsCode = await transpiler.transform(sourceCode);
       fileContent = new TextEncoder().encode(jsCode).buffer;
