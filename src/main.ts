@@ -30,17 +30,21 @@ async function main() {
     return "";
   })();
 
-  // Windows: Enable GPU for WebGL/3D games
+  // Windows: Fix WebGL/3D rendering (disable sandbox for GPU access)
   if (process.platform === "win32" && config.window.windowsGPU) {
-    // Set WebView2 environment variables for GPU acceleration
+    // WebView2 sandbox blocks WebGL context creation
+    // Solution: Disable sandbox + enable software rendering fallback
     process.env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = 
-      "--enable-features=msWebView2EnableDWriteCoreModeOnly " +
-      "--disable-features=msWebView2BrowserHitTransparent " +
-      "--enable-gpu-rasterization " +
-      "--enable-zero-copy " +
-      "--disable-gpu-vsync " +
-      "--num-raster-threads=4 " +
-      "--enable-accelerated-video-decode";
+      "--disable-web-security " +
+      "--disable-features=IsolateOrigins,site-per-process " +
+      "--disable-site-isolation-trials " +
+      "--disable-gpu-sandbox " +
+      "--enable-webgl " +
+      "--enable-accelerated-2d-canvas " +
+      "--ignore-gpu-blocklist " +
+      "--use-angle=swiftshader";  // Force SwiftShader (software renderer)
+    
+    console.log("🎮 Windows: WebGL enabled (SwiftShader software renderer)");
   }
   
   // Create webview (parallel with icon loading)
