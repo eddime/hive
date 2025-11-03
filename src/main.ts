@@ -331,20 +331,14 @@ const server = new AssetServer();
     if (event.data === 'stop') {
       server.stop();
       process.exit(0);
-    } else if (event.data.type === 'injectHTML') {
-      // Replace HTML content for game mode
-      const path = event.data.path;
-      const modifiedHTML = event.data.html;
-      const bytes = new TextEncoder().encode(modifiedHTML);
-      
-      // Update cache directly
-      server.cache.set(path, {
-        content: bytes,
+    } else if (event.data.type === 'updateHTML') {
+      // Update HTML in cache for game mode
+      const content = new TextEncoder().encode(event.data.content);
+      server.cache.set(event.data.path, {
+        content,
         lastUsed: Date.now()
       });
-      
-      console.log('✅ HTML injected:', path, bytes.length, 'bytes');
-      self.postMessage({ type: 'htmlInjected', path });
+      console.log('🔄 HTML updated in cache:', event.data.path);
     }
   });
 })();
@@ -522,33 +516,30 @@ const server = new AssetServer();
       `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
     );
 
-    // CRITICAL: Use navigate() for WebGL/WASM/localStorage support
-    // setHTML() uses 'about:blank' origin which has security restrictions
-    // navigate() uses 'http://localhost' origin which is a proper origin
-    console.log("🎮 Using navigate() for proper HTTP origin (required for WebGL on Windows)");
+    // For games with external scripts (crossorigin), use navigate instead of setHTML
+    // setHTML creates origin 'null' which blocks CORS even with Access-Control-Allow-Origin: *
+    const hasCrossOriginScripts = html.includes('crossorigin=');
     
-    // Inject modified HTML into asset server cache FIRST
-    worker.postMessage({
-      type: 'injectHTML',
-      path: entryPath,
-      html: finalHTML
-    });
-    
-    // Wait for HTML injection confirmation
-    await new Promise<void>((resolve) => {
-      const handler = (event: MessageEvent) => {
-        if (event.data.type === 'htmlInjected' && event.data.path === entryPath) {
-          worker.removeEventListener('message', handler);
-          resolve();
-        }
-      };
-      worker.addEventListener('message', handler);
-    });
-    
-    console.log(`📍 Navigating to: ${serverURL}${entryPath}`);
-    
-    // Navigate to the HTTP URL (proper origin = WebGL works!)
-    webview.navigate(`${serverURL}${entryPath}`);
+    if (hasCrossOriginScripts) {
+      // Game mode: Update HTML on asset server and navigate
+      console.log("🎮 Game detected - using navigate() for CORS support");
+      
+      // Tell worker to update the HTML with our modifications
+      worker.postMessage({
+        type: 'updateHTML',
+        path: entryPath,
+        content: finalHTML
+      });
+      
+      // Wait a bit for update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Navigate to the server URL (proper origin for CORS)
+      webview.navigate(`${serverURL}${entryPath}`);
+    } else {
+      // Normal app mode: Use setHTML (bindings work instantly)
+      webview.setHTML(finalHTML);
+    }
     
     // Run webview (blocking - returns when window closes)
     webview.run();
