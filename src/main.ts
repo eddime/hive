@@ -30,21 +30,13 @@ async function main() {
     return "";
   })();
 
-  // Windows: Fix WebGL/3D rendering (disable sandbox for GPU access)
+  // Windows: Fix WebGL context creation failure
   if (process.platform === "win32" && config.window.windowsGPU) {
-    // WebView2 sandbox blocks WebGL context creation
-    // Solution: Disable sandbox + enable software rendering fallback
-    process.env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = 
-      "--disable-web-security " +
-      "--disable-features=IsolateOrigins,site-per-process " +
-      "--disable-site-isolation-trials " +
-      "--disable-gpu-sandbox " +
-      "--enable-webgl " +
-      "--enable-accelerated-2d-canvas " +
-      "--ignore-gpu-blocklist " +
-      "--use-angle=swiftshader";  // Force SwiftShader (software renderer)
+    // Windows WebView2 sandbox issue: GPU process fails to initialize
+    // Solution from Microsoft docs: Disable GPU entirely, use software rendering
+    process.env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--disable-gpu";
     
-    console.log("🎮 Windows: WebGL enabled (SwiftShader software renderer)");
+    console.log("🎮 Windows: GPU disabled (software WebGL rendering)");
   }
   
   // Create webview (parallel with icon loading)
