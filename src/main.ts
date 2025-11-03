@@ -508,21 +508,10 @@ const server = new AssetServer();
       `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
     );
 
-    // For games with external scripts (crossorigin), use navigate instead of setHTML
-    // setHTML creates origin 'null' which blocks CORS even with Access-Control-Allow-Origin: *
-    const hasCrossOriginScripts = html.includes('crossorigin=');
-    
-    if (hasCrossOriginScripts) {
-      // Game mode: Use navigate() for proper CORS
-      console.log("🎮 Game detected - using navigate() for CORS support");
-      
-      // Asset server will inject scripts dynamically on first HTML request
-      // No worker messages needed - cleaner and faster!
-      webview.navigate(`${serverURL}${entryPath}`);
-    } else {
-      // Normal app mode: Use setHTML (bindings work instantly)
-      webview.setHTML(finalHTML);
-    }
+    // Always use setHTML - bindings work, base tag handles URLs
+    // navigate() would lose all bindings and break the app!
+    console.log("🎮 Loading app with setHTML (bindings preserved)");
+    webview.setHTML(finalHTML);
     
     // Run webview (blocking - returns when window closes)
     webview.run();
