@@ -11,6 +11,9 @@ export default {
     fullscreen: false,      // F11 to toggle fullscreen
     startFullscreen: false,  // Auto-fullscreen on launch (games, kiosk mode)
     debug: true,           // Enable debug logs (set to false for production)
+    
+    // Windows-specific: Enable GPU/WebGL (fix for Windows WebView2 sandbox)
+    windowsGPU: true,       // Enable hardware acceleration on Windows
   },
 
   // Development settings

@@ -30,6 +30,19 @@ async function main() {
     return "";
   })();
 
+  // Windows: Enable GPU for WebGL/3D games
+  if (process.platform === "win32" && config.window.windowsGPU) {
+    // Set WebView2 environment variables for GPU acceleration
+    process.env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = 
+      "--enable-features=msWebView2EnableDWriteCoreModeOnly " +
+      "--disable-features=msWebView2BrowserHitTransparent " +
+      "--enable-gpu-rasterization " +
+      "--enable-zero-copy " +
+      "--disable-gpu-vsync " +
+      "--num-raster-threads=4 " +
+      "--enable-accelerated-video-decode";
+  }
+  
   // Create webview (parallel with icon loading)
   const webview = new Webview(config.window.debug, {
     width: config.window.width,
