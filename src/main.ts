@@ -331,6 +331,20 @@ const server = new AssetServer();
     if (event.data === 'stop') {
       server.stop();
       process.exit(0);
+    } else if (event.data.type === 'injectHTML') {
+      // Replace HTML content for game mode
+      const path = event.data.path;
+      const modifiedHTML = event.data.html;
+      const bytes = new TextEncoder().encode(modifiedHTML);
+      
+      // Update cache directly
+      server.cache.set(path, {
+        content: bytes,
+        lastUsed: Date.now()
+      });
+      
+      console.log('✅ HTML injected:', path, bytes.length, 'bytes');
+      self.postMessage({ type: 'htmlInjected', path });
     }
   });
 })();
@@ -508,10 +522,37 @@ const server = new AssetServer();
       `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
     );
 
-    // Always use setHTML - bindings work, base tag handles URLs
-    // navigate() would lose all bindings and break the app!
-    console.log("🎮 Loading app with setHTML (bindings preserved)");
-    webview.setHTML(finalHTML);
+    // For games: Use navigate() for proper origin (fixes localStorage, WebGL, WASM)
+    // Bindings are preserved if registered BEFORE navigate!
+    const hasCrossOriginScripts = html.includes('crossorigin=');
+    
+    if (hasCrossOriginScripts) {
+      console.log("🎮 Game mode: Using navigate() for proper origin");
+      
+      // Inject modified HTML into asset server
+      worker.postMessage({
+        type: 'injectHTML',
+        path: entryPath,
+        html: finalHTML
+      });
+      
+      // Wait for confirmation
+      await new Promise<void>((resolve) => {
+        const handler = (event: MessageEvent) => {
+          if (event.data.type === 'htmlInjected' && event.data.path === entryPath) {
+            worker.removeEventListener('message', handler);
+            resolve();
+          }
+        };
+        worker.addEventListener('message', handler);
+      });
+      
+      // Now navigate - will load our modified HTML!
+      webview.navigate(`${serverURL}${entryPath}`);
+    } else {
+      console.log("📱 App mode: Using setHTML()");
+      webview.setHTML(finalHTML);
+    }
     
     // Run webview (blocking - returns when window closes)
     webview.run();
