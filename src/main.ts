@@ -10,28 +10,9 @@ import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../bunery.config";
 import { registerBindings } from "./backend/bindings";
 import { AssetServer } from "../lib/asset-server";
-import { appendFileSync } from "fs";
-
-// Windows Debug Logger (writes to file since console is hidden)
-const isWindows = process.platform === "win32";
-const debugLog = (msg: string) => {
-  console.log(msg); // Still log to console for dev mode
-  if (isWindows && config.build.windows?.hideConsole) {
-    try {
-      appendFileSync("bunery-debug.log", `${new Date().toISOString()} - ${msg}\n`);
-    } catch (e) {
-      // Ignore if can't write
-    }
-  }
-};
 
 // Main entry - optimized for speed
 async function main() {
-  try {
-    debugLog("🥐 Bunery starting...");
-    debugLog(`Platform: ${process.platform}, Arch: ${process.arch}`);
-    debugLog(`Working directory: ${process.cwd()}`);
-    
   // 🚀 PERFORMANCE: Load icon in parallel with webview creation
   const iconPromise = (async () => {
     try {
@@ -62,23 +43,12 @@ async function main() {
   registerBindings(webview);
   
   // Test binding to verify bindings work
-    // Log to file binding (for Windows console capture)
-    webview.bind("__logToFile", (args: string) => {
-      try {
-        const logData = JSON.parse(args);
-        debugLog(`[JS ${logData.level.toUpperCase()}] ${logData.msg}`);
-      } catch (e) {
-        debugLog(`[JS] ${args}`);
-      }
-      return "ok";
+  if (config.window.debug) {
+    webview.bind("__test", (args: string) => {
+      console.log("🔧 Test binding called with:", args);
+      return JSON.stringify({ success: true, echo: args });
     });
-    
-    if (config.window.debug) {
-      webview.bind("__test", (args: string) => {
-        console.log("🔧 Test binding called with:", args);
-        return JSON.stringify({ success: true, echo: args });
-      });
-    }
+  }
 
   // Wait for icon to finish loading
   const faviconBase64 = await iconPromise;
@@ -97,8 +67,8 @@ async function main() {
     }
     
     if (config.window.debug) {
-      debugLog(`📦 Embedded assets: ${Object.keys(embeddedAssets).length} files`);
-      debugLog(`📝 Assets: ${Object.keys(embeddedAssets).join(", ")}`);
+      console.log(`📦 Embedded assets: ${Object.keys(embeddedAssets).length} files`);
+      console.log(`📝 Assets:`, Object.keys(embeddedAssets).join(", "));
     }
     
     // Create worker code (works in both dev and production!)
@@ -283,9 +253,19 @@ class AssetServer {
     return \`http://localhost:\${this.port}\`;
   }
 
-  stop() {
+  stop(force = false) {
     if (this.server) {
-      this.server.stop();
+      try {
+        this.server.stop(force);
+        this.server = null;
+      } catch (e) {
+        console.error('Failed to stop server:', e);
+      }
+    }
+    // Clear all caches
+    if (this.cache) {
+      this.cache.clear();
+      this.cacheSize = 0;
     }
   }
 
@@ -359,7 +339,18 @@ const server = new AssetServer();
   
   self.addEventListener('message', (event) => {
     if (event.data === 'stop') {
-      server.stop();
+      try {
+        // Force stop server
+        if (server && server.stop) {
+          server.stop(true); // Force close
+        }
+        // Clear cache
+        if (server && server.cache) {
+          server.cache.clear();
+        }
+      } catch (e) {
+        console.error('Server cleanup error:', e);
+      }
       process.exit(0);
     } else if (event.data.type === 'updateHTML') {
       // Update HTML in cache for game mode
@@ -398,17 +389,17 @@ const server = new AssetServer();
     const baseURL = `${serverURL}${entryPoint.includes('/') ? '/' + entryPoint.substring(0, entryPoint.lastIndexOf('/') + 1) : '/'}`;
     
     if (config.window.debug) {
-      debugLog(`📄 Entry point: ${entryPath}`);
-      debugLog(`🔗 Base URL: ${baseURL}`);
-      debugLog(`🌐 Fetching HTML from: ${serverURL}${entryPath}`);
+      console.log(`📄 Entry point: ${entryPath}`);
+      console.log(`🔗 Base URL: ${baseURL}`);
+      console.log(`🌐 Fetching HTML from: ${serverURL}${entryPath}`);
     }
     
     // Fetch the HTML
     const html = await fetch(`${serverURL}${entryPath}`).then(r => r.text());
     
     if (config.window.debug) {
-      debugLog(`✅ HTML fetched: ${html.length} bytes`);
-      debugLog(`📝 HTML preview: ${html.substring(0, 200)}...`);
+      console.log(`✅ HTML fetched: ${html.length} bytes`);
+      console.log(`📝 HTML preview: ${html.substring(0, 200)}...`);
     }
     
     // Inject <base> tag and favicon to make ALL relative URLs point to HTTP server!
@@ -540,52 +531,10 @@ const server = new AssetServer();
       });
     `.trim();
     
-    // Console Logger + Error catcher for Windows debugging
-    const consoleLogger = `
-      // Hijack console to send logs to backend
-      const originalConsole = {
-        log: console.log,
-        error: console.error,
-        warn: console.warn,
-        info: console.info
-      };
-      
-      const sendLog = (level, ...args) => {
-        const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-        originalConsole[level](...args); // Keep original console
-        
-        // Send to backend if binding exists
-        if (window.__logToFile) {
-          try {
-            window.__logToFile(JSON.stringify({ level, msg }));
-          } catch (e) {
-            // Ignore if binding not available
-          }
-        }
-      };
-      
-      console.log = (...args) => sendLog('log', ...args);
-      console.error = (...args) => sendLog('error', ...args);
-      console.warn = (...args) => sendLog('warn', ...args);
-      console.info = (...args) => sendLog('info', ...args);
-      
-      window.addEventListener('error', (e) => {
-        console.error('❌ JS Error:', e.message, 'at', e.filename, 'line', e.lineno);
-      });
-      window.addEventListener('unhandledrejection', (e) => {
-        console.error('❌ Promise rejection:', e.reason);
-        console.error('   Stack:', e.reason?.stack || 'No stack trace');
-        console.error('   Promise:', e.promise);
-        e.preventDefault(); // Prevent default handling
-      });
-      
-      console.log('✅ Console logger + error catchers installed');
-    `.trim();
-    
     // Inject JS utilities
     const finalHTML = htmlWithBase.replace(
       /<\/head>/i,
-      `<script>${consoleLogger} ${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
+      `<script>${fullscreenScript} window.BUN_VERSION="${Bun.version}"; ${reloadPreventionScript}</script></head>`
     );
 
     // For games with external scripts (crossorigin), use navigate instead of setHTML
@@ -594,7 +543,7 @@ const server = new AssetServer();
     
     if (hasCrossOriginScripts) {
       // Game mode: Update HTML on asset server and navigate
-      debugLog("🎮 Game detected - using navigate() for CORS support");
+      console.log("🎮 Game detected - using navigate() for CORS support");
       
       // Tell worker to update the HTML with our modifications
       worker.postMessage({
@@ -607,25 +556,41 @@ const server = new AssetServer();
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Navigate to the server URL (proper origin for CORS)
-      debugLog(`📍 Navigating to: ${serverURL}${entryPath}`);
       webview.navigate(`${serverURL}${entryPath}`);
-      debugLog("✅ Navigate called - webview should load now");
     } else {
       // Normal app mode: Use setHTML (bindings work instantly)
-      debugLog("📄 Using setHTML for non-game content");
       webview.setHTML(finalHTML);
     }
-    
-    debugLog("🚀 Starting webview.run()");
     
     // Run webview (blocking - returns when window closes)
     webview.run();
     
-    debugLog("👋 Webview closed");
+    // Clean up - Force stop server and terminate worker
+    const cleanup = async () => {
+      try {
+        worker.postMessage('stop');
+        // Give worker time to cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
+        worker.terminate();
+      } catch (e) {
+        console.error("Worker cleanup error:", e);
+      }
+    };
     
-    // Clean up
-    worker.postMessage('stop');
-    worker.terminate();
+    await cleanup();
+    
+    // Handle process termination signals
+    process.on('SIGINT', async () => {
+      console.log('\n👋 Shutting down...');
+      await cleanup();
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', async () => {
+      console.log('\n👋 Shutting down...');
+      await cleanup();
+      process.exit(0);
+    });
     
   } else {
     // Fallback: Embedded mode (if asset server disabled)
@@ -651,11 +616,6 @@ const server = new AssetServer();
 
   // webview.run() blocks until window is closed
   // Process ends naturally after this
-  } catch (error) {
-    debugLog(`❌ Fatal error: ${error}`);
-    debugLog(`Stack: ${error.stack}`);
-    throw error;
-  }
 }
 
 // Start immediately
@@ -663,9 +623,5 @@ try {
   await main();
 } catch (error) {
   console.error("Fatal error:", error);
-  debugLog(`❌ CRASH: ${error}`);
-  if (error.stack) {
-    debugLog(`Stack trace: ${error.stack}`);
-  }
   process.exit(1);
 }
