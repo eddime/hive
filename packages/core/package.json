@@ -1,0 +1,36 @@
+{
+  "name": "@bunery/core",
+  "version": "1.0.0",
+  "description": "🥐 Bunery Core - Backend bindings for Bun runtime",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "keywords": [
+    "bunery",
+    "desktop",
+    "bun",
+    "backend",
+    "bindings"
+  ],
+  "author": "Edgar Metzler",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eddime/bunery.git",
+    "directory": "packages/core"
+  },
+  "peerDependencies": {
+    "bun-types": "latest"
+  }
+}
+

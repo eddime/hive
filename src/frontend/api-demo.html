@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bunery API Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .api-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    .api-card {
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .api-card h3 {
+      margin: 0 0 1rem 0;
+      color: #ff1b40;
+      font-size: 1.125rem;
+    }
+    
+    .api-card button {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+      font-size: 0.875rem;
+    }
+    
+    .result {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-family: 'Monaco', 'Courier New', monospace;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .result.success {
+      border-color: #10b981;
+      color: #059669;
+    }
+    
+    .result.error {
+      border-color: #ff1b40;
+      color: #ff1b40;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="hero">
+      <img src="bunery-logo.svg" alt="Bunery" class="logo">
+      <p>🚀 Bunery API Demo</p>
+    </div>
+
+    <div class="api-grid">
+      <!-- File System -->
+      <div class="api-card">
+        <h3>📁 File System</h3>
+        <button onclick="testFS()" class="primary">Test FS API</button>
+        <div id="fs-result" class="result" style="display:none"></div>
+      </div>
+
+      <!-- Operating System -->
+      <div class="api-card">
+        <h3>💻 Operating System</h3>
+        <button onclick="testOS()" class="primary">Test OS API</button>
+        <div id="os-result" class="result" style="display:none"></div>
+      </div>
+
+      <!-- Window Control -->
+      <div class="api-card">
+        <h3>🪟 Window Control</h3>
+        <button onclick="testWindow()" class="primary">Test Window API</button>
+        <div id="window-result" class="result" style="display:none"></div>
+      </div>
+
+      <!-- Storage -->
+      <div class="api-card">
+        <h3>💾 Persistent Storage</h3>
+        <button onclick="testStorage()" class="primary">Test Storage API</button>
+        <div id="storage-result" class="result" style="display:none"></div>
+      </div>
+
+      <!-- Shell -->
+      <div class="api-card">
+        <h3>⚡️ Shell & Process</h3>
+        <button onclick="testShell()" class="primary">Test Shell API</button>
+        <div id="shell-result" class="result" style="display:none"></div>
+      </div>
+
+      <!-- Clipboard -->
+      <div class="api-card">
+        <h3>📋 Clipboard</h3>
+        <button onclick="testClipboard()" class="primary">Test Clipboard API</button>
+        <div id="clipboard-result" class="result" style="display:none"></div>
+      </div>
+
+      <!-- App Info -->
+      <div class="api-card">
+        <h3>ℹ️ App Info</h3>
+        <button onclick="testApp()" class="primary">Test App API</button>
+        <div id="app-result" class="result" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top: 2rem;">
+      <span>⚡️ All APIs use direct Bun bindings</span>
+      <span><a href="index.html" style="color: #ff1b40; text-decoration: none;">← Back</a></span>
+    </div>
+  </div>
+
+  <script type="module" src="api-demo.ts"></script>
+</body>
+</html>
+

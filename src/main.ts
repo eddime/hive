@@ -9,6 +9,7 @@ import { Webview, SizeHint } from "webview-bun";
 import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../bunery.config";
 import { registerBindings } from "./backend/bindings";
+import { registerBindings as registerCoreBindings } from "../packages/core/src/index";
 import { AssetServer } from "../lib/asset-server";
 
 // Main entry - optimized for speed
@@ -40,6 +41,10 @@ async function main() {
   webview.title = config.window.title;
 
   // Register bindings FIRST (before navigate!)
+  // 1. Register Bunery Core API bindings (fs, os, window, etc.)
+  registerCoreBindings(webview, config);
+  
+  // 2. Register custom app bindings
   registerBindings(webview);
   
   // Test binding to verify bindings work

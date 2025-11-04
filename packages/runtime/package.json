@@ -1,0 +1,34 @@
+{
+  "name": "@bunery/runtime",
+  "version": "1.0.0",
+  "description": "🥐 Bunery Runtime API - Frontend bindings for desktop apps",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "keywords": [
+    "bunery",
+    "desktop",
+    "webview",
+    "electron-alternative",
+    "tauri-alternative",
+    "neutralino-alternative"
+  ],
+  "author": "Edgar Metzler",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eddime/bunery.git",
+    "directory": "packages/runtime"
+  }
+}
+
