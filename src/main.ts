@@ -431,7 +431,7 @@ const server = new AssetServer();
           document.addEventListener('DOMContentLoaded', () => {
             if (!document.body.hasAttribute('tabindex')) {
               document.body.setAttribute('tabindex', '-1');
-            }
+              }
           });
           
           // Override addEventListener to use passive listeners by default
@@ -605,10 +605,10 @@ const server = new AssetServer();
 
 // Start immediately (wrapped to avoid top-level await for bytecode caching)
 (async () => {
-  try {
-    await main();
-  } catch (error) {
-    console.error("Fatal error:", error);
-    process.exit(1);
-  }
+try {
+  await main();
+} catch (error) {
+  console.error("Fatal error:", error);
+  process.exit(1);
+}
 })();

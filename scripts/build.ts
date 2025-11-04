@@ -71,16 +71,41 @@ if (config.build.embedNativeLibs !== false) {
 
 console.log("\n🔨 Compiling binary...");
 
+// Determine target platform (for cross-compilation)
+const targetOS = process.env.TARGET_OS || process.platform;
+const targetArch = process.env.TARGET_ARCH || process.arch;
+
+// Map platform names
+const platformMap: Record<string, string> = {
+  darwin: "darwin",
+  win32: "windows",
+  windows: "windows",
+  linux: "linux",
+};
+
+const platform = platformMap[targetOS] || targetOS;
+
+// Use baseline for Windows/Linux for maximum CPU compatibility
+const target = (platform === "windows" || platform === "linux")
+  ? `bun-${platform}-${targetArch}-baseline`
+  : `bun-${platform}-${targetArch}`;
+
+console.log(`🎯 Target: ${target}`);
+if (platform === "windows" || platform === "linux") {
+  console.log("ℹ️  Using baseline build (maximum CPU compatibility, no AVX2 required)");
+}
+
 const outfile = `${config.build.outdir}/${config.build.outfile}`;
 const buildArgs = [
   "build",
   "--compile",
+  `--target=${target}`,
   config.build.minify ? "--minify" : "",
   // Sourcemaps disabled in production builds to reduce size
   config.build.bytecode ? "--bytecode" : "",
-  // Windows-specific flags (only work when building ON Windows)
-  ...(process.platform === "win32" && config.build.windows?.icon ? [`--windows-icon=${config.build.windows.icon}`] : []),
-  ...(process.platform === "win32" && config.build.windows?.hideConsole ? ["--windows-hide-console"] : []),
+  // Windows-specific flags (only work when building ON Windows, not cross-compiling)
+  ...(platform === "windows" && process.platform === "win32" && config.build.windows?.icon ? [`--windows-icon=${config.build.windows.icon}`] : []),
+  ...(platform === "windows" && process.platform === "win32" && config.build.windows?.hideConsole ? ["--windows-hide-console"] : []),
   "./src/main.ts",
   "--outfile",
   outfile,
@@ -100,10 +125,13 @@ const exitCode = await proc.exited;
 const buildTime = ((performance.now() - startTime) / 1000).toFixed(1);
 
 if (exitCode === 0) {
+  // Determine actual output filename (Bun adds .exe on Windows cross-compile)
+  const actualOutfile = platform === "windows" ? `${outfile}.exe` : outfile;
+  
   // 🚀 PERFORMANCE: Strip debug symbols to reduce binary size
-  if (config.build.strip !== false && process.platform !== "win32") {
+  if (config.build.strip !== false && platform !== "windows") {
     console.log("   🔧 Stripping debug symbols...");
-    const stripResult = Bun.spawnSync(["strip", outfile], {
+    const stripResult = Bun.spawnSync(["strip", actualOutfile], {
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -112,7 +140,7 @@ if (exitCode === 0) {
     }
   }
   
-  const stats = await Bun.file(outfile).stat();
+  const stats = await Bun.file(actualOutfile).stat();
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
   
   // Copy or embed native libraries based on config
@@ -120,9 +148,9 @@ if (exitCode === 0) {
     console.log(`   ✨ Native libraries embedded (single-file executable)`);
   } else {
     // Copy external library file next to binary
-    const libName = process.platform === "darwin" ? "libwebview.dylib" :
-                     process.platform === "win32" ? "libwebview.dll" :
-                     "libwebview.so";
+    const libName = platform === "darwin" ? "libwebview.dylib" :
+                     platform === "windows" ? "libwebview.dll" :
+                     `libwebview-${targetArch}.so`;
     const libSource = `lib/native/${libName}`;
     const libDest = `${config.build.outdir}/${libName}`;
     
@@ -135,7 +163,7 @@ if (exitCode === 0) {
   }
   
   // macOS .app bundle creation (if enabled)
-  if (process.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
+  if (platform === "darwin" && config.build.macos?.createAppBundle !== false) {
     try {
       const iconPath = config.build.macos.icon;
       const iconFile = Bun.file(iconPath);
@@ -333,12 +361,13 @@ exec "$DIR/${appName}-bin" "$@"
   }
   
   console.log(`\n✅ Build successful in ${buildTime}s!`);
-  if (process.platform === "darwin" && config.build.macos?.createAppBundle !== false) {
+  if (platform === "darwin" && config.build.macos?.createAppBundle !== false) {
     console.log(`   📦 ${config.build.outdir}/${config.app.name}.app`);
   } else {
-  console.log(`   📦 ${outfile} (${sizeMB} MB)`);
+    const ext = platform === "windows" ? ".exe" : "";
+    console.log(`   📦 ${outfile}${ext} (${sizeMB} MB)`);
   }
-  console.log(`   🎯 Platform: ${process.platform}-${process.arch}`);
+  console.log(`   🎯 Platform: ${platform}-${targetArch}`);
   console.log(`\n💡 Tip: Run "bun run build:all" to build for all platforms`);
 } else {
   console.error(`\n❌ Build failed with exit code ${exitCode}`);
