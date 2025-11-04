@@ -42,10 +42,10 @@ function initStorage(appName: string) {
 /**
  * Load storage data
  */
-async function loadStorage(): Promise<Record<string, any>> {
+function loadStorage(): Record<string, any> {
   try {
     if (existsSync(storagePath)) {
-      const data = await Bun.file(storagePath).text();
+      const data = readFileSync(storagePath, 'utf-8');
       return JSON.parse(data);
     }
   } catch (error) {
@@ -57,7 +57,7 @@ async function loadStorage(): Promise<Record<string, any>> {
 /**
  * Save storage data
  */
-async function saveStorage(data: Record<string, any>) {
+function saveStorage(data: Record<string, any>) {
   try {
     writeFileSync(storagePath, JSON.stringify(data, null, 2));
   } catch (error) {
@@ -287,7 +287,7 @@ export function registerBindings(webview: Webview, config: any) {
   webview.bind('__storageGet', (args: string) => {
     try {
       const [key] = JSON.parse(args);
-      const data = await loadStorage();
+      const data = loadStorage();
       return successResponse(data[key] || null);
     } catch (error: any) {
       return errorResponse(error.message);
@@ -297,9 +297,9 @@ export function registerBindings(webview: Webview, config: any) {
   webview.bind('__storageSet', (args: string) => {
     try {
       const [key, value] = JSON.parse(args);
-      const data = await loadStorage();
+      const data = loadStorage();
       data[key] = value;
-      await saveStorage(data);
+      saveStorage(data);
       return successResponse(null);
     } catch (error: any) {
       return errorResponse(error.message);
@@ -309,9 +309,9 @@ export function registerBindings(webview: Webview, config: any) {
   webview.bind('__storageRemove', (args: string) => {
     try {
       const [key] = JSON.parse(args);
-      const data = await loadStorage();
+      const data = loadStorage();
       delete data[key];
-      await saveStorage(data);
+      saveStorage(data);
       return successResponse(null);
     } catch (error: any) {
       return errorResponse(error.message);
@@ -320,7 +320,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   webview.bind('__storageClear', () => {
     try {
-      await saveStorage({});
+      saveStorage({});
       return successResponse(null);
     } catch (error: any) {
       return errorResponse(error.message);
@@ -329,7 +329,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   webview.bind('__storageKeys', () => {
     try {
-      const data = await loadStorage();
+      const data = loadStorage();
       return successResponse(Object.keys(data));
     } catch (error: any) {
       return errorResponse(error.message);
