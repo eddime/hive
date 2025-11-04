@@ -1,16 +1,16 @@
 /* 🥐 Bunery - Simple & Clean */
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: #ffffff;
   color: #1a1a1a;
-  min-height: 100vh;
+    min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,7 +152,7 @@ button.reset:hover {
   .hero h1 {
     font-size: 1.75rem;
   }
-
+  
   .counter {
     font-size: 3rem;
   }

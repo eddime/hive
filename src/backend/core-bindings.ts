@@ -78,7 +78,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== FILE SYSTEM ====================
 
-  webview.bind('fsReadFile', async (args: string) => {
+  webview.bind('____fsReadFile', async (args: string) => {
     try {
       const [path] = JSON.parse(args);
       const content = await readFile(path, 'utf-8');
@@ -88,7 +88,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('fsWriteFile', async (args: string) => {
+  webview.bind('__fsWriteFile', async (args: string) => {
     try {
       const [path, data] = JSON.parse(args);
       await writeFile(path, data, 'utf-8');
@@ -98,7 +98,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('fsReadDir', async (args: string) => {
+  webview.bind('__fsReadDir', async (args: string) => {
     try {
       const [path] = JSON.parse(args);
       const files = readdirSync(path);
@@ -108,7 +108,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('fsExists', async (args: string) => {
+  webview.bind('__fsExists', async (args: string) => {
     try {
       const [path] = JSON.parse(args);
       const exists = existsSync(path);
@@ -118,7 +118,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('fsRemove', async (args: string) => {
+  webview.bind('__fsRemove', async (args: string) => {
     try {
       const [path] = JSON.parse(args);
       unlinkSync(path);
@@ -128,7 +128,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('fsMkdir', async (args: string) => {
+  webview.bind('__fsMkdir', async (args: string) => {
     try {
       const [path, recursive] = JSON.parse(args);
       mkdirSync(path, { recursive: recursive !== false });
@@ -138,7 +138,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('fsStat', async (args: string) => {
+  webview.bind('__fsStat', async (args: string) => {
     try {
       const [path] = JSON.parse(args);
       const stats = statSync(path);
@@ -156,19 +156,19 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== OPERATING SYSTEM ====================
 
-  webview.bind('osPlatform', async () => {
+  webview.bind('__osPlatform', async () => {
     return successResponse(platform());
   });
 
-  webview.bind('osVersion', async () => {
+  webview.bind('__osVersion', async () => {
     return successResponse(version());
   });
 
-  webview.bind('osArch', async () => {
+  webview.bind('__osArch', async () => {
     return successResponse(arch());
   });
 
-  webview.bind('osInfo', async () => {
+  webview.bind('__osInfo', async () => {
     return successResponse({
       platform: platform(),
       version: version(),
@@ -178,7 +178,7 @@ export function registerBindings(webview: Webview, config: any) {
     });
   });
 
-  webview.bind('osEnv', async (args: string) => {
+  webview.bind('__osEnv', async (args: string) => {
     try {
       const [name] = JSON.parse(args);
       return successResponse(process.env[name]);
@@ -189,7 +189,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== WINDOW CONTROL ====================
 
-  webview.bind('windowSetTitle', async (args: string) => {
+  webview.bind('__windowSetTitle', async (args: string) => {
     try {
       const [title] = JSON.parse(args);
       webview.setTitle(title);
@@ -199,7 +199,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('windowMinimize', async () => {
+  webview.bind('__windowMinimize', async () => {
     try {
       // Note: webview-bun doesn't have minimize yet, but we prepare for it
       console.warn('[Bunery] window.minimize() not yet supported by webview-bun');
@@ -209,7 +209,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('windowMaximize', async () => {
+  webview.bind('__windowMaximize', async () => {
     try {
       console.warn('[Bunery] window.maximize() not yet supported by webview-bun');
       return successResponse(null);
@@ -218,7 +218,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('windowRestore', async () => {
+  webview.bind('__windowRestore', async () => {
     try {
       console.warn('[Bunery] window.restore() not yet supported by webview-bun');
       return successResponse(null);
@@ -227,7 +227,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('windowClose', async () => {
+  webview.bind('__windowClose', async () => {
     try {
       webview.close();
       return successResponse(null);
@@ -236,7 +236,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('windowSetSize', async (args: string) => {
+  webview.bind('__windowSetSize', async (args: string) => {
     try {
       const [width, height] = JSON.parse(args);
       webview.setSize(width, height, 0); // 0 = WEBVIEW_HINT_NONE
@@ -246,7 +246,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('windowSetFullscreen', async (args: string) => {
+  webview.bind('__windowSetFullscreen', async (args: string) => {
     try {
       const [enabled] = JSON.parse(args);
       // Use JavaScript to toggle fullscreen (best cross-platform support)
@@ -265,7 +265,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('windowGetState', async () => {
+  webview.bind('__windowGetState', async () => {
     try {
       // Note: Getting window state requires platform-specific APIs
       console.warn('[Bunery] window.getState() not yet fully supported');
@@ -285,7 +285,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== STORAGE ====================
 
-  webview.bind('storageGet', async (args: string) => {
+  webview.bind('__storageGet', async (args: string) => {
     try {
       const [key] = JSON.parse(args);
       const data = await loadStorage();
@@ -295,7 +295,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('storageSet', async (args: string) => {
+  webview.bind('__storageSet', async (args: string) => {
     try {
       const [key, value] = JSON.parse(args);
       const data = await loadStorage();
@@ -307,7 +307,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('storageRemove', async (args: string) => {
+  webview.bind('__storageRemove', async (args: string) => {
     try {
       const [key] = JSON.parse(args);
       const data = await loadStorage();
@@ -319,7 +319,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('storageClear', async () => {
+  webview.bind('__storageClear', async () => {
     try {
       await saveStorage({});
       return successResponse(null);
@@ -328,7 +328,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('storageKeys', async () => {
+  webview.bind('__storageKeys', async () => {
     try {
       const data = await loadStorage();
       return successResponse(Object.keys(data));
@@ -339,7 +339,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== SHELL ====================
 
-  webview.bind('shellExecute', async (args: string) => {
+  webview.bind('__shellExecute', async (args: string) => {
     try {
       const [command] = JSON.parse(args);
       const proc = Bun.spawnSync(command.split(' '), {
@@ -356,7 +356,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('shellOpen', async (args: string) => {
+  webview.bind('__shellOpen', async (args: string) => {
     try {
       const [url] = JSON.parse(args);
       const openCmd = platform() === 'darwin' ? 'open' : 
@@ -368,7 +368,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('shellOpenPath', async (args: string) => {
+  webview.bind('__shellOpenPath', async (args: string) => {
     try {
       const [path] = JSON.parse(args);
       const openCmd = platform() === 'darwin' ? 'open' : 
@@ -382,7 +382,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== CLIPBOARD ====================
 
-  webview.bind('clipboardWriteText', async (args: string) => {
+  webview.bind('__clipboardWriteText', async (args: string) => {
     try {
       const [text] = JSON.parse(args);
       // Platform-specific clipboard commands
@@ -398,7 +398,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('clipboardReadText', async () => {
+  webview.bind('__clipboardReadText', async () => {
     try {
       const clipCmd = platform() === 'darwin' ? ['pbpaste'] :
                       platform() === 'win32' ? ['powershell', '-command', 'Get-Clipboard'] :
@@ -412,15 +412,15 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== APP ====================
 
-  webview.bind('appGetVersion', async () => {
+  webview.bind('__appGetVersion', async () => {
     return successResponse(config?.app?.version || '1.0.0');
   });
 
-  webview.bind('appGetName', async () => {
+  webview.bind('__appGetName', async () => {
     return successResponse(appName);
   });
 
-  webview.bind('appQuit', async () => {
+  webview.bind('__appQuit', async () => {
     try {
       webview.close();
       process.exit(0);
@@ -429,7 +429,7 @@ export function registerBindings(webview: Webview, config: any) {
     }
   });
 
-  webview.bind('appGetPaths', async () => {
+  webview.bind('__appGetPaths', async () => {
     const home = homedir();
     return successResponse({
       app: process.cwd(),

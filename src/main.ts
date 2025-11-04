@@ -543,7 +543,7 @@ const server = new AssetServer();
       webview.navigate(`${serverURL}${entryPath}`);
     } else {
       // Normal app mode: Use setHTML (bindings work instantly)
-      webview.setHTML(finalHTML);
+    webview.setHTML(finalHTML);
     }
     
     // Run webview (blocking - returns when window closes)
