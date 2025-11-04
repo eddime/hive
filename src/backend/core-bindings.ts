@@ -351,16 +351,9 @@ export function registerBindings(webview: Webview, config: any) {
   webview.bind('__shellExecute', (args: string) => {
     try {
       const [command] = JSON.parse(args);
-      
-      // On Windows, use cmd.exe for builtin commands
-      let cmdArray: string[];
-      if (platform() === 'win32') {
-        cmdArray = ['cmd', '/c', command];
-      } else {
-        // Unix: Simple shell parsing - split by spaces but respect quotes
-        const parts = String(command).match(/[^\s"]+|"([^"]*)"/g) || [];
-        cmdArray = parts.map((p: string) => p.replace(/^"|"$/g, ''));
-      }
+      // Simple shell parsing: split by spaces but respect quotes
+      const parts = String(command).match(/[^\s"]+|"([^"]*)"/g) || [];
+      const cmdArray = parts.map((p: string) => p.replace(/^"|"$/g, ''));
       
       const proc = Bun.spawnSync(cmdArray, {
         stdout: 'pipe',

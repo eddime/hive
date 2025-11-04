@@ -97,8 +97,9 @@ for (const target of targets) {
     "--target",
     targetStr,
     "--minify",
-    // Bytecode enabled for all platforms! 🚀
-    config.build.bytecode ? "--bytecode" : "",
+    // Bytecode disabled on Windows due to segfault issues
+    // See: https://github.com/oven-sh/bun/issues
+    (config.build.bytecode && target.platform !== "windows") ? "--bytecode" : "",
     ...platformFlags,
     "./src/main.ts",
     "--outfile",

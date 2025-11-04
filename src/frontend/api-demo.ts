@@ -92,9 +92,7 @@ function showResult(id: string, data: any, isError = false) {
 // Test File System API
 (window as any).testFS = async () => {
   try {
-    // Use cross-platform temp directory from backend
-    const paths = await bunery.app.getPaths();
-    const testFile = `${paths.temp}/bunery-test.txt`;
+    const testFile = '/tmp/bunery-test.txt';
     await bunery.fs.writeFile(testFile, 'Hello from Bunery! 🥐');
     const content = await bunery.fs.readFile(testFile);
     
