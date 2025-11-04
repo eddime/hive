@@ -36,9 +36,14 @@ async function main() {
     width: config.window.width,
     height: config.window.height,
     hint: config.window.resizable ? SizeHint.NONE : SizeHint.FIXED,
+    frameless: config.window.frameless || false,
   });
 
   webview.title = config.window.title;
+
+  // Note: Minimum size enforcement via SizeHint is set in the Webview constructor
+  // webview-bun doesn't have a runtime setMinSize API yet
+  // For now, users can use the window.setMinSize() API from the frontend if needed
 
   // Register bindings FIRST (before navigate!)
   // 1. Register Bunery Core API bindings (fs, os, window, etc.)

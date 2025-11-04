@@ -7,7 +7,10 @@ export default {
     title: "Bunery",
     width: 1280,
     height: 720,
+    minWidth: 800,          // Minimum window width
+    minHeight: 600,         // Minimum window height
     resizable: true,        // Allow window resizing
+    frameless: false,       // Hide window frame (titlebar, borders)
     fullscreen: false,      // F11 to toggle fullscreen
     startFullscreen: false,  // Auto-fullscreen on launch (games, kiosk mode)
     debug: true,           // Enable debug logs (set to false for production)

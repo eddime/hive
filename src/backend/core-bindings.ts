@@ -237,8 +237,18 @@ export function registerBindings(webview: Webview, config: any) {
 
   webview.bind('__windowSetSize', (args: string) => {
     try {
-      const [width, height] = JSON.parse(args);
-      webview.setSize(width, height, 0); // 0 = WEBVIEW_HINT_NONE
+      const [width, height, hint] = JSON.parse(args);
+      webview.setSize(width, height, hint || 0); // 0 = WEBVIEW_HINT_NONE
+      return successResponse(null);
+    } catch (error: any) {
+      return errorResponse(error.message);
+    }
+  });
+
+  webview.bind('__windowSetMinSize', (args: string) => {
+    try {
+      const [minWidth, minHeight] = JSON.parse(args);
+      webview.setSize(minWidth, minHeight, 1); // 1 = WEBVIEW_HINT_MIN
       return successResponse(null);
     } catch (error: any) {
       return errorResponse(error.message);
