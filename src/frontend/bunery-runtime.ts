@@ -6,7 +6,7 @@
  * @internal Use namespaced APIs (bunery.fs, bunery.window, etc.) instead
  */
 function invoke<T = any>(name: string, ...args: any[]): Promise<T> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       const fn = (window as any)[`__${name}`];
       if (!fn) {
@@ -14,7 +14,8 @@ function invoke<T = any>(name: string, ...args: any[]): Promise<T> {
         return;
       }
       // Core bindings expect JSON string with array of args
-      const result = fn(JSON.stringify(args));
+      // Bindings may return Promise or string, so we await
+      const result = await fn(JSON.stringify(args));
       const parsed = typeof result === 'string' ? JSON.parse(result) : result;
       
       // Handle error responses

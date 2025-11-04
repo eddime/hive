@@ -15,8 +15,17 @@ function showResult(id: string, data: any, isError = false) {
 (window as any).testFS = async () => {
   try {
     // Debug: Check if binding exists
-    console.log('Checking __fsWriteFile:', typeof (window as any).__fsWriteFile);
-    console.log('All window bindings:', Object.keys(window).filter(k => k.startsWith('__')));
+    const bindings = Object.keys(window).filter(k => k.startsWith('__'));
+    console.log('FS bindings:', bindings.filter(k => k.startsWith('__fs')));
+    console.log('Testing invoke directly...');
+    
+    // Test invoke directly
+    try {
+      const result = (window as any).__fsWriteFile(JSON.stringify(['/tmp/test.txt', 'test']));
+      console.log('Direct call result:', result);
+    } catch (e) {
+      console.error('Direct call error:', e);
+    }
     
     // Test writing and reading
     const testFile = '/tmp/bunery-test.txt';
