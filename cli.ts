@@ -21,12 +21,12 @@ const commands = {
   win: {
     desc: "Bake for Windows only",
     script: "scripts/build.ts",
-    env: { TARGET_OS: "windows", TARGET_ARCH: "x64" },
+    env: { TARGET_OS: "windows" },
   },
   windows: { // Alias
     desc: "Bake for Windows only (alias)",
     script: "scripts/build.ts",
-    env: { TARGET_OS: "windows", TARGET_ARCH: "x64" },
+    env: { TARGET_OS: "windows" },
   },
   linux: {
     desc: "Bake for Linux only",

@@ -32,17 +32,23 @@ const original = `if (process.env.WEBVIEW_PATH) {
   lib_file = await import("../build/libwebview.dylib");
 }`;
 
-const patched = `if (process.env.WEBVIEW_PATH) {
+const patched = `// Use inline path joining for Windows compiled binary compatibility
+function joinPath(base, ...parts) {
+  return parts.reduce((acc, part) => {
+    if (part.startsWith('/') || part.startsWith('\\\\')) return part;
+    const sep = process.platform === 'win32' ? '\\\\' : '/';
+    return acc + sep + part.replace(/^[\\\\/]+/, '');
+  }, base.replace(/[\\\\/]+$/, ''));
+}
+
+if (process.env.WEBVIEW_PATH) {
   lib_file = { default: process.env.WEBVIEW_PATH };
 } else if (process.platform === "win32") {
-  const path = require("path");
-  lib_file = { default: path.resolve(__dirname, "../build/libwebview.dll") };
+  lib_file = { default: joinPath(import.meta.dir, "../build/libwebview.dll") };
 } else if (process.platform === "linux") {
-  const path = require("path");
-  lib_file = { default: path.resolve(__dirname, \`../build/libwebview-\${process.arch}.so\`) };
+  lib_file = { default: joinPath(import.meta.dir, \`../build/libwebview-\${process.arch}.so\`) };
 } else if (process.platform === "darwin") {
-  const path = require("path");
-  lib_file = { default: path.resolve(__dirname, "../build/libwebview.dylib") };
+  lib_file = { default: joinPath(import.meta.dir, "../build/libwebview.dylib") };
 }`;
 
 if (content.includes(patched)) {

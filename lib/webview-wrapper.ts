@@ -1,8 +1,7 @@
 /**
  * 🥐 Bunery Webview Wrapper
  * 
- * webview-bun + native extensions for missing features (macOS only)
- * On Windows/Linux: Uses pure webview-bun (no extensions)
+ * webview-bun + native extensions for missing features
  */
 
 import { Webview as WebviewBun, SizeHint } from "webview-bun";
@@ -78,25 +77,23 @@ export class Webview extends WebviewBun {
 
     this.opts = options;
     
-    // Get native window handle (macOS only)
-    if (process.platform === "darwin" && ext) {
-      try {
-        this.windowHandle = (this as any).unsafeWindowHandle;
-      } catch (e) {
-        // Silent fail - extensions not available
-      }
+    // Get native window handle
+    try {
+      this.windowHandle = (this as any).unsafeWindowHandle;
+    } catch (e) {
+      console.warn("[Bunery] Could not get window handle:", e);
+    }
 
-      // Apply options after window is created
-      if (this.windowHandle) {
-        if (options.frameless) {
-          ext.symbols.webview_set_frameless(this.windowHandle, true);
-        }
-        if (options.alwaysOnTop) {
-          ext.symbols.webview_set_always_on_top(this.windowHandle, true);
-        }
-        if (options.fullscreen) {
-          ext.symbols.webview_toggle_fullscreen(this.windowHandle);
-        }
+    // Apply options after window is created
+    if (ext && this.windowHandle) {
+      if (options.frameless) {
+        ext.symbols.webview_set_frameless(this.windowHandle, true);
+      }
+      if (options.alwaysOnTop) {
+        ext.symbols.webview_set_always_on_top(this.windowHandle, true);
+      }
+      if (options.fullscreen) {
+        ext.symbols.webview_toggle_fullscreen(this.windowHandle);
       }
     }
   }
