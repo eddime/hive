@@ -72,6 +72,7 @@ build: {
 2. **Idempotent**: Running the patch multiple times is safe
 3. **Version-specific**: If `webview-bun` updates, the patch may need adjustments
 4. **Local only**: The patch affects your local `node_modules`, not the published package
+5. **Windows limitation**: Bytecode is automatically disabled on Windows due to Bun stability issues (segfault). macOS and Linux still benefit from faster startup!
 
 ## 🧪 Testing
 

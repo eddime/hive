@@ -97,8 +97,9 @@ for (const target of targets) {
     "--target",
     targetStr,
     "--minify",
-    // Sourcemaps disabled in production builds to reduce size
-    config.build.bytecode ? "--bytecode" : "",
+    // Bytecode disabled on Windows due to segfault issues
+    // See: https://github.com/oven-sh/bun/issues
+    (config.build.bytecode && target.platform !== "windows") ? "--bytecode" : "",
     ...platformFlags,
     "./src/main.ts",
     "--outfile",
