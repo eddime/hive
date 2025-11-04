@@ -104,5 +104,9 @@ export function getNativeLibraryPath(): string {
   }
   
   console.log(`✅ Native library extracted: ${libPath}`);
+  
+  // Set env var for webview-bun to find the library
+  process.env.WEBVIEW_PATH = libPath;
+  
   return libPath;
 }

@@ -32,23 +32,16 @@ const original = `if (process.env.WEBVIEW_PATH) {
   lib_file = await import("../build/libwebview.dylib");
 }`;
 
-const patched = `// Use inline path joining for Windows compiled binary compatibility
-function joinPath(base, ...parts) {
-  return parts.reduce((acc, part) => {
-    if (part.startsWith('/') || part.startsWith('\\\\')) return part;
-    const sep = process.platform === 'win32' ? '\\\\' : '/';
-    return acc + sep + part.replace(/^[\\\\/]+/, '');
-  }, base.replace(/[\\\\/]+$/, ''));
-}
-
+const patched = `// Use WEBVIEW_PATH env var (set by Bunery's embedded-native.ts for single-file executables)
+// This avoids path resolution issues in compiled binaries
 if (process.env.WEBVIEW_PATH) {
   lib_file = { default: process.env.WEBVIEW_PATH };
 } else if (process.platform === "win32") {
-  lib_file = { default: joinPath(import.meta.dir, "../build/libwebview.dll") };
+  lib_file = { default: new URL("../build/libwebview.dll", import.meta.url).pathname };
 } else if (process.platform === "linux") {
-  lib_file = { default: joinPath(import.meta.dir, \`../build/libwebview-\${process.arch}.so\`) };
+  lib_file = { default: new URL(\`../build/libwebview-\${process.arch}.so\`, import.meta.url).pathname };
 } else if (process.platform === "darwin") {
-  lib_file = { default: joinPath(import.meta.dir, "../build/libwebview.dylib") };
+  lib_file = { default: new URL("../build/libwebview.dylib", import.meta.url).pathname };
 }`;
 
 if (content.includes(patched)) {
