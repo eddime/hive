@@ -1,6 +1,83 @@
 // 🥐 Bunery API Demo
-// Import from local runtime (absolute path for asset server)
-import { bunery } from '/bunery-runtime.ts';
+// INLINE runtime to avoid caching issues
+function invoke<T = any>(name: string, ...args: any[]): Promise<T> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const fn = (window as any)[`__${name}`];
+      if (!fn) {
+        reject(new Error(`[Bunery] Binding "${name}" not found`));
+        return;
+      }
+      const result = await fn(JSON.stringify(args));
+      const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+      if (parsed && parsed.__bunery_error) {
+        reject(new Error(parsed.message || 'Unknown error'));
+        return;
+      }
+      resolve(parsed);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+const bunery = {
+  fs: {
+    readFile: (path: string) => invoke('fsReadFile', path),
+    writeFile: (path: string, data: string) => invoke('fsWriteFile', path, data),
+    readDir: (path: string) => invoke('fsReadDir', path),
+    exists: (path: string) => invoke('fsExists', path),
+    remove: (path: string) => invoke('fsRemove', path),
+    mkdir: (path: string, recursive?: boolean) => invoke('fsMkdir', path, recursive),
+    stat: (path: string) => invoke('fsStat', path),
+  },
+  os: {
+    platform: () => invoke('osPlatform'),
+    version: () => invoke('osVersion'),
+    arch: () => invoke('osArch'),
+    info: () => invoke('osInfo'),
+    env: (name: string) => invoke('osEnv', name),
+  },
+  window: {
+    setTitle: (title: string) => invoke('windowSetTitle', title),
+    minimize: () => invoke('windowMinimize'),
+    maximize: () => invoke('windowMaximize'),
+    restore: () => invoke('windowRestore'),
+    close: () => invoke('windowClose'),
+    setSize: (width: number, height: number) => invoke('windowSetSize', width, height),
+    setPosition: (x: number, y: number) => invoke('windowSetPosition', x, y),
+    setFullscreen: (enabled: boolean) => invoke('windowSetFullscreen', enabled),
+    getState: () => invoke('windowGetState'),
+  },
+  dialog: {
+    open: (options?: any) => invoke('dialogOpen', options),
+    save: (options?: any) => invoke('dialogSave', options),
+    message: (options?: any) => invoke('dialogMessage', options),
+    confirm: (message: string) => invoke('dialogConfirm', message),
+  },
+  storage: {
+    get: (key: string) => invoke('storageGet', key),
+    set: (key: string, value: any) => invoke('storageSet', key, value),
+    remove: (key: string) => invoke('storageRemove', key),
+    clear: () => invoke('storageClear'),
+    keys: () => invoke('storageKeys'),
+  },
+  shell: {
+    execute: (command: string) => invoke('shellExecute', command),
+    open: (url: string) => invoke('shellOpen', url),
+    openPath: (path: string) => invoke('shellOpenPath', path),
+  },
+  clipboard: {
+    writeText: (text: string) => invoke('clipboardWriteText', text),
+    readText: () => invoke('clipboardReadText'),
+  },
+  app: {
+    getVersion: () => invoke('appGetVersion'),
+    getName: () => invoke('appGetName'),
+    quit: () => invoke('appQuit'),
+    getPaths: () => invoke('appGetPaths'),
+  },
+};
 
 function showResult(id: string, data: any, isError = false) {
   const el = document.getElementById(id);
