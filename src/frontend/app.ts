@@ -38,7 +38,6 @@ if (import.meta.hot) {
 
 // DOM Cache
 const counter = document.getElementById('counter')!;
-const version = document.getElementById('version')!;
 
 // State
 let currentValue = 0;
@@ -78,5 +77,4 @@ async function loadCounter() {
 };
 
 // Initialize
-window.BUN_VERSION && (version.textContent = window.BUN_VERSION);
 loadCounter();
