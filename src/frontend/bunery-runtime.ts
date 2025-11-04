@@ -13,7 +13,8 @@ function invoke<T = any>(name: string, ...args: any[]): Promise<T> {
         reject(new Error(`[Bunery] Binding "${name}" not found`));
         return;
       }
-      const result = fn(...args);
+      // Core bindings expect JSON string with array of args
+      const result = fn(JSON.stringify(args));
       const parsed = typeof result === 'string' ? JSON.parse(result) : result;
       
       // Handle error responses
