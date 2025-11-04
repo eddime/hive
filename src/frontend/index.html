@@ -3,55 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hive</title>
+  <title>Bunery</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="app">
-    <!-- Header -->
-    <header class="header">
-      <div class="logo">
-        <span class="icon">🐝</span>
-        <h1>Hive</h1>
-      </div>
-      <div class="meta">
-        <span class="tag">v<span id="version">1.0</span></span>
-        <span class="tag green">Bindings</span>
-      </div>
-    </header>
+    <div class="hero">
+      <img src="../../assets/bunery-logo.svg" alt="Bunery" class="logo">
+      <h1>Bunery</h1>
+      <p>🥐 Bake your desktop apps</p>
+    </div>
 
-    <!-- Counter -->
-    <main class="main">
-      <div class="counter-section">
-        <div class="label">Counter</div>
-        <div id="counter" class="counter">0</div>
-        <div class="sublabel">Direct Bindings • &lt;1ms</div>
+    <div class="counter-card">
+      <div id="counter" class="counter">0</div>
+      <div class="buttons">
+        <button onclick="decrement()">−</button>
+        <button onclick="increment()" class="primary">+</button>
       </div>
+      <button onclick="reset()" class="reset">Reset</button>
+    </div>
 
-      <!-- Controls -->
-      <div class="controls">
-        <button onclick="decrement()" class="btn btn-secondary">
-          <span class="btn-icon">−</span>
-        </button>
-        <button onclick="increment()" class="btn btn-primary">
-          <span class="btn-icon">+</span>
-        </button>
-      </div>
-
-      <button onclick="reset()" class="btn btn-text">
-        <span class="btn-icon">↻</span>
-        Reset
-      </button>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="info">
-        <span class="dot"></span>
-        <span>Ready</span>
-      </div>
-      <div class="hint">Press F11 for fullscreen</div>
-    </footer>
+    <div class="info">
+      <span>Direct Bindings • &lt;1ms</span>
+      <span>v1.0.0</span>
+    </div>
   </div>
 
   <script type="module" src="app.ts"></script>
