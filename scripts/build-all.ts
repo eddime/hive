@@ -50,6 +50,22 @@ if (frontendBuild.exitCode !== 0) {
   process.exit(1);
 }
 
+// Embed native libraries (if enabled)
+if (config.build.embedNativeLibs !== false) {
+  console.log("\n📦 Embedding native libraries...");
+  const embedResult = Bun.spawnSync(["bun", "run", "scripts/embed-native-libs.ts"], {
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+
+  if (embedResult.exitCode !== 0) {
+    console.error("❌ Failed to embed native libraries!");
+    process.exit(1);
+  }
+} else {
+  console.log("\n📚 Using external native libraries (embedNativeLibs=false)");
+}
+
 console.log("\n🔨 Compiling binaries...\n");
 
 const buildResults = [];
@@ -117,23 +133,33 @@ for (const target of targets) {
           await Bun.write(`${macosPath}/.gitkeep`, "");
           await Bun.write(`${resourcesPath}/.gitkeep`, "");
           
-          // Copy binary (keep original name for now)
-          const bundledBinary = `${macosPath}/${config.build.outfile}-bin`;
-          await Bun.write(bundledBinary, Bun.file(outfile));
-          Bun.spawnSync(["chmod", "+x", bundledBinary]);
-          
-          // Copy icon and dylib
-          await Bun.write(`${resourcesPath}/icon.icns`, iconFile);
-          await Bun.write(`${macosPath}/libwebview.dylib`, Bun.file(`node_modules/webview-bun/build/libwebview.dylib`));
-          
-          // Create launcher script that sets DYLD_LIBRARY_PATH
-          const launcher = `#!/bin/bash
+          // Copy binary (handling embedded vs external mode)
+          if (config.build.embedNativeLibs !== false) {
+            // Embedded mode: Copy binary directly (no launcher needed)
+            const bundledBinary = `${macosPath}/${config.build.outfile}`;
+            await Bun.write(bundledBinary, Bun.file(outfile));
+            Bun.spawnSync(["chmod", "+x", bundledBinary]);
+          } else {
+            // External mode: Copy binary and dylib, create launcher
+            const bundledBinary = `${macosPath}/${config.build.outfile}-bin`;
+            await Bun.write(bundledBinary, Bun.file(outfile));
+            Bun.spawnSync(["chmod", "+x", bundledBinary]);
+            
+            // Copy dylib
+            await Bun.write(`${macosPath}/libwebview.dylib`, Bun.file(`node_modules/webview-bun/build/libwebview.dylib`));
+            
+            // Create launcher script that sets DYLD_LIBRARY_PATH
+            const launcher = `#!/bin/bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
 export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
 exec "$DIR/${config.build.outfile}-bin" "$@"
 `;
-          await Bun.write(`${macosPath}/${config.build.outfile}`, launcher);
-          Bun.spawnSync(["chmod", "+x", `${macosPath}/${config.build.outfile}`]);
+            await Bun.write(`${macosPath}/${config.build.outfile}`, launcher);
+            Bun.spawnSync(["chmod", "+x", `${macosPath}/${config.build.outfile}`]);
+          }
+          
+          // Copy icon
+          await Bun.write(`${resourcesPath}/icon.icns`, iconFile);
           
           // Create Info.plist
           const plist = `<?xml version="1.0" encoding="UTF-8"?>
@@ -228,15 +254,19 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
       }
     }
     
-    // Copy webview library for Windows and Linux (macOS is handled in .app bundle above)
+    // Copy or embed native libraries based on config
     if (target.platform === "windows") {
-      const libSource = `node_modules/webview-bun/build/libwebview.dll`;
-      const libDest = `${config.build.outdir}/libwebview.dll`;
-      try {
-        await Bun.write(libDest, Bun.file(libSource));
-        console.log(`   📚 libwebview.dll copied`);
-      } catch (e) {
-        console.warn(`   ⚠️  Failed to copy libwebview.dll:`, e);
+      if (config.build.embedNativeLibs !== false) {
+        console.log(`   ✨ Native library embedded (single-file executable)`);
+      } else {
+        const libSource = `node_modules/webview-bun/build/libwebview.dll`;
+        const libDest = `${config.build.outdir}/libwebview.dll`;
+        try {
+          await Bun.write(libDest, Bun.file(libSource));
+          console.log(`   📚 libwebview.dll copied (external library mode)`);
+        } catch (e) {
+          console.warn(`   ⚠️  Failed to copy libwebview.dll:`, e);
+        }
       }
       
       // Auto-apply icon with rcedit if cross-compiling (macOS/Linux → Windows)
@@ -271,14 +301,18 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
         }
       }
     } else if (target.platform === "linux") {
-      const libName = `libwebview-${target.arch}.so`;
-      const libSource = `node_modules/webview-bun/build/${libName}`;
-      const libDest = `${config.build.outdir}/${libName}`;
-      try {
-        await Bun.write(libDest, Bun.file(libSource));
-        console.log(`   📚 ${libName} copied`);
-      } catch (e) {
-        console.warn(`   ⚠️  Failed to copy ${libName}:`, e);
+      if (config.build.embedNativeLibs !== false) {
+        console.log(`   ✨ Native library embedded (single-file executable)`);
+      } else {
+        const libName = `libwebview-${target.arch}.so`;
+        const libSource = `node_modules/webview-bun/build/${libName}`;
+        const libDest = `${config.build.outdir}/${libName}`;
+        try {
+          await Bun.write(libDest, Bun.file(libSource));
+          console.log(`   📚 ${libName} copied (external library mode)`);
+        } catch (e) {
+          console.warn(`   ⚠️  Failed to copy ${libName}:`, e);
+        }
       }
     }
     

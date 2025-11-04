@@ -1,20 +1,14 @@
 // 🥐 Bunery Frontend - Modern, Minimal, Fast
 
-// Type-safe API wrapper (inlined for single-file build)
-interface BindingResult<T> {
-  value?: T;
-  error?: boolean;
-  message?: string;
-  }
-
-async function callBinding<T>(binding: string, args?: any): Promise<T> {
-  const fn = (window as any)[`__${binding}`];
-  if (!fn) throw new Error(`Binding ${binding} not found`);
+// Simple binding wrapper that matches our new Promise-based API
+async function callBinding<T>(name: string): Promise<T> {
+  const fn = (window as any)[`__${name}`];
+  if (!fn) throw new Error(`Binding ${name} not found`);
   
-  const resultStr = await fn(args ? JSON.stringify(args) : undefined);
-  const result: BindingResult<T> = JSON.parse(resultStr);
+  // Call with empty args array (no parameters needed for counter)
+  const result = await fn();
   
-  if (result.error) {
+  if (result && result.error) {
     throw new Error(result.message || 'Unknown error');
   }
   

@@ -90,7 +90,7 @@ export function registerBindings(webview: Webview, config: any) {
   webview.bind('__fsWriteFile', (args: string) => {
     try {
       const [path, data] = JSON.parse(args);
-      writeFileSync(path, data, 'utf-8');
+      writeFileSync(path, String(data), 'utf-8');
       return successResponse(null);
     } catch (error: any) {
       return errorResponse(error.message);
@@ -351,7 +351,11 @@ export function registerBindings(webview: Webview, config: any) {
   webview.bind('__shellExecute', (args: string) => {
     try {
       const [command] = JSON.parse(args);
-      const proc = Bun.spawnSync(command.split(' '), {
+      // Simple shell parsing: split by spaces but respect quotes
+      const parts = String(command).match(/[^\s"]+|"([^"]*)"/g) || [];
+      const cmdArray = parts.map((p: string) => p.replace(/^"|"$/g, ''));
+      
+      const proc = Bun.spawnSync(cmdArray, {
         stdout: 'pipe',
         stderr: 'pipe',
       });

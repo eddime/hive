@@ -5,28 +5,26 @@
  * Invokes a backend binding with type-safe return value
  * @internal Use namespaced APIs (bunery.fs, bunery.window, etc.) instead
  */
-function invoke<T = any>(name: string, ...args: any[]): Promise<T> {
-  return new Promise((resolve, reject) => {
-    try {
-      const fn = (window as any)[`__${name}`];
-      if (!fn) {
-        reject(new Error(`[Bunery] Binding "${name}" not found`));
-        return;
-      }
-      const result = fn(...args);
-      const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-      
-      // Handle error responses
-      if (parsed && parsed.__bunery_error) {
-        reject(new Error(parsed.message || 'Unknown error'));
-        return;
-      }
-      
-      resolve(parsed);
-    } catch (error) {
-      reject(error);
+async function invoke<T = any>(name: string, ...args: any[]): Promise<T> {
+  try {
+    const fn = (window as any)[`__${name}`];
+    if (!fn) {
+      throw new Error(`[Bunery] Binding "${name}" not found`);
     }
-  });
+    
+    // Call binding (returns Promise from __buneryInvoke)
+    const result = await fn(...args);
+    const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+    
+    // Handle error responses
+    if (parsed && parsed.__bunery_error) {
+      throw new Error(parsed.message || 'Unknown error');
+    }
+    
+    return parsed;
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**

@@ -2,10 +2,8 @@
 // ⚠️  DON'T EDIT THIS FILE unless you know what you're doing!
 // 👉 Edit your app in src/frontend/ and src/backend/
 
-// IMPORTANT: Fix webview DLL path before importing webview-bun
-import "./fix-webview-path";
-
-import { Webview, SizeHint } from "webview-bun";
+// 🥐 Use webview wrapper (extends webview-bun with missing features)
+import { Webview, SizeHint } from "../lib/webview-wrapper";
 import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../bunery.config";
 import { registerBindings } from "./backend/bindings";
@@ -36,14 +34,32 @@ async function main() {
     width: config.window.width,
     height: config.window.height,
     hint: config.window.resizable ? SizeHint.NONE : SizeHint.FIXED,
-    frameless: config.window.frameless || false,
+    frameless: config.window.frameless,
+    fullscreen: config.window.startFullscreen,
   });
 
   webview.title = config.window.title;
+  
+  // 🎨 Set icon
+  try {
+    const iconPath = process.platform === "darwin" ? "assets/icon.png" : 
+                     process.platform === "win32" ? "assets/icon.ico" : 
+                     "assets/icon.png";
+    webview.setIcon(iconPath);
+    console.log(`🎨 Icon set: ${iconPath}`);
+  } catch (e) {
+    console.warn("⚠️  Failed to set icon:", e);
+  }
 
-  // Note: Minimum size enforcement via SizeHint is set in the Webview constructor
-  // webview-bun doesn't have a runtime setMinSize API yet
-  // For now, users can use the window.setMinSize() API from the frontend if needed
+  // 📏 Set minimum window size
+  if (config.window.minWidth && config.window.minHeight) {
+    try {
+      webview.setMinSize(config.window.minWidth, config.window.minHeight);
+      console.log(`📏 Min size set: ${config.window.minWidth}x${config.window.minHeight}`);
+    } catch (e) {
+      console.warn("⚠️  Failed to set min size:", e);
+    }
+  }
 
   // Register bindings FIRST (before navigate!)
   // 1. Register Bunery Core API bindings (fs, os, window, etc.)
@@ -65,6 +81,9 @@ async function main() {
 
   // Build fullscreen script (F11 toggle only, no auto-fullscreen due to browser restrictions)
   const fullscreenScript = `document.addEventListener('keydown',(e)=>{if(e.key==='F11'){e.preventDefault();document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}});`;
+
+  // Track worker for cleanup
+  let assetWorker: Worker | null = null;
 
   // Check if asset server mode is enabled
   if (htmlPath === "ASSET_SERVER") {
@@ -358,6 +377,7 @@ const server = new AssetServer();
     const blob = new Blob([workerCode], { type: "application/typescript" });
     const workerURL = URL.createObjectURL(blob);
     const worker = new Worker(workerURL);
+    assetWorker = worker; // Save for cleanup
     
     // Wait for worker to be ready and get URL
     let serverURL = "";
@@ -405,23 +425,14 @@ const server = new AssetServer();
             document.body.style.backfaceVisibility = 'hidden';
           });
           
-          // 🔇 MACOS FIX: Prevent system beep sounds on keypress
+          // 🔇 MACOS BEEP FIX: Set tabindex to make body focusable
+          // This prevents the system beep without using preventDefault
           // See: https://github.com/tauri-apps/wry/issues/799
-          document.addEventListener('keydown', (e) => {
-            // Prevent beep for all keys except when typing in input/textarea
-            const target = e.target;
-            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-              return; // Allow normal behavior in text inputs
+          document.addEventListener('DOMContentLoaded', () => {
+            if (!document.body.hasAttribute('tabindex')) {
+              document.body.setAttribute('tabindex', '-1');
             }
-            // For all other elements, prevent default to avoid beep
-            if (!e.metaKey && !e.ctrlKey && !e.altKey) {
-              // Only prevent for non-modifier keys
-              const allowedKeys = ['Tab', 'Enter', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'F11'];
-              if (!allowedKeys.includes(e.key)) {
-                e.preventDefault();
-              }
-            }
-          }, true); // Use capture phase to catch all events
+          });
           
           // Override addEventListener to use passive listeners by default
           const originalAddEventListener = EventTarget.prototype.addEventListener;
@@ -581,7 +592,15 @@ const server = new AssetServer();
   }
 
   // webview.run() blocks until window is closed
-  // Process ends naturally after this
+  // Now terminate worker and exit cleanly
+  if (assetWorker) {
+    console.log("🔚 Stopping asset server worker...");
+    assetWorker.postMessage('stop');
+    assetWorker.terminate();
+  }
+  
+  console.log("✅ Bunery closed cleanly");
+  process.exit(0);
 }
 
 // Start immediately

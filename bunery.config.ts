@@ -37,6 +37,10 @@ export default {
     outdir: "dist",     // Output directory
     outfile: "bunery",  // Executable name
     
+    // Native library embedding (single-file vs external files)
+    embedNativeLibs: true,  // true = Embedded in binary (single-file, +100KB, recommended)
+                            // false = External .dll/.so/.dylib files (smaller binary, needs external files)
+    
     // Frontend build mode
     frontend: {
       // Asset server: Embeds all files in binary, serves via HTTP at runtime

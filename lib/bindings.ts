@@ -14,23 +14,20 @@ export function registerBindings(webview: Webview, bindings: BindingMap) {
   for (const [name, handler] of Object.entries(bindings)) {
     const bindingName = name.startsWith("__") ? name : `__${name}`;
     
-    // webview.bind expects a SYNC function that returns string directly
-    webview.bind(bindingName, (argsJson: string) => {
+    // webview-bun's bind signature: (...args: any) => any
+    webview.bind(bindingName, (...args: any[]) => {
       try {
-        // Parse arguments if provided
-        const args = argsJson && argsJson.trim() ? JSON.parse(argsJson) : undefined;
+        // Call handler with args (webview-bun handles JSON parsing)
+        const result = handler(...args);
         
-        // Call handler (must be sync!)
-        const result = handler(args);
-        
-        // Serialize and return
-        return JSON.stringify(result);
+        // Return result directly (webview-bun handles JSON stringification)
+        return result;
       } catch (error) {
         // Return error in consistent format
-        return JSON.stringify({
+        return {
           error: true,
           message: error instanceof Error ? error.message : String(error),
-        });
+        };
       }
     });
   }
