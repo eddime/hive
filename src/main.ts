@@ -2,16 +2,28 @@
 // ⚠️  DON'T EDIT THIS FILE unless you know what you're doing!
 // 👉 Edit your app in src/frontend/ and src/backend/
 
-// 🥐 Use webview wrapper (extends webview-bun with missing features)
-import { Webview, SizeHint } from "../lib/webview-wrapper";
+// 🔧 CRITICAL: Extract native library BEFORE webview import!
+// Webview must be imported AFTER this runs to ensure WEBVIEW_PATH is set
+import { getNativeLibraryPath } from "../lib/embedded-native";
+getNativeLibraryPath(); // Sets process.env.WEBVIEW_PATH
+
+// Import everything EXCEPT webview at top level
 import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../bunery.config";
 import { registerBindings } from "./backend/bindings";
 import { registerBindings as registerCoreBindings } from "./backend/core-bindings";
 import { AssetServer } from "../lib/asset-server";
 
+// Lazy import webview AFTER library path is set
+let Webview: any, SizeHint: any;
+
 // Main entry - optimized for speed
 async function main() {
+  // 🔧 Import webview AFTER native library is extracted
+  const webviewModule = await import("../lib/webview-wrapper");
+  Webview = webviewModule.Webview;
+  SizeHint = webviewModule.SizeHint;
+  
   // 🚀 PERFORMANCE: Load icon in parallel with webview creation
   const iconPromise = (async () => {
     try {
