@@ -78,7 +78,7 @@ export function registerBindings(webview: Webview, config: any) {
 
   // ==================== FILE SYSTEM ====================
 
-  webview.bind('____fsReadFile', async (args: string) => {
+  webview.bind('__fsReadFile', async (args: string) => {
     try {
       const [path] = JSON.parse(args);
       const content = await readFile(path, 'utf-8');
