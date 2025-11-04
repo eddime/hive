@@ -603,10 +603,12 @@ const server = new AssetServer();
   process.exit(0);
 }
 
-// Start immediately
-try {
-  await main();
-} catch (error) {
-  console.error("Fatal error:", error);
-  process.exit(1);
-}
+// Start immediately (wrapped to avoid top-level await for bytecode caching)
+(async () => {
+  try {
+    await main();
+  } catch (error) {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  }
+})();

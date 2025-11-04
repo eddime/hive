@@ -57,7 +57,8 @@
   "scripts": {
     "start": "bun run scripts/dev.ts",
     "dev": "bun run scripts/dev.ts",
-    "bake": "bun cli.ts"
+    "bake": "bun cli.ts",
+    "postinstall": "bun scripts/patch-webview-bun.ts"
   },
   "type": "module",
   "dependencies": {

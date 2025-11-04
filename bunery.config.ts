@@ -32,7 +32,7 @@ export default {
   build: {
     minify: true,       // Reduce code size
     sourcemap: false,   // Disabled for smaller binaries
-    bytecode: false,    // Disabled (webview-bun uses top-level await)
+    bytecode: true,     // ⚡ ENABLED! webview-bun patched to remove top-level await
     strip: true,        // Strip debug symbols (smaller binary, ~30% size reduction)
     outdir: "dist",     // Output directory
     outfile: "bunery",  // Executable name
