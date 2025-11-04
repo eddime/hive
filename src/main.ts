@@ -9,7 +9,7 @@ import { Webview, SizeHint } from "webview-bun";
 import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
 import config from "../bunery.config";
 import { registerBindings } from "./backend/bindings";
-import { registerBindings as registerCoreBindings } from "../packages/core/src/index";
+import { registerBindings as registerCoreBindings } from "./backend/core-bindings";
 import { AssetServer } from "../lib/asset-server";
 
 // Main entry - optimized for speed
