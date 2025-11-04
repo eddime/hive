@@ -191,7 +191,7 @@ export function registerBindings(webview: Webview, config: any) {
   webview.bind('__windowSetTitle', (args: string) => {
     try {
       const [title] = JSON.parse(args);
-      webview.setTitle(title);
+      webview.title = title;
       return successResponse(null);
     } catch (error: any) {
       return errorResponse(error.message);
