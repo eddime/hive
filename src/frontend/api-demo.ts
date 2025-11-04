@@ -3,13 +3,18 @@
 function invoke<T = any>(name: string, ...args: any[]): Promise<T> {
   return new Promise(async (resolve, reject) => {
     try {
+      console.log('🔍 invoke called:', name, args);
       const fn = (window as any)[`__${name}`];
       if (!fn) {
+        console.error('❌ Binding not found:', name);
         reject(new Error(`[Bunery] Binding "${name}" not found`));
         return;
       }
+      console.log('✅ Binding found, calling...');
       const result = await fn(JSON.stringify(args));
+      console.log('✅ Binding returned:', result);
       const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+      console.log('✅ Parsed:', parsed);
       if (parsed && parsed.__bunery_error) {
         reject(new Error(parsed.message || 'Unknown error'));
         return;
@@ -90,11 +95,15 @@ function showResult(id: string, data: any, isError = false) {
 
 // Test File System API
 (window as any).testFS = async () => {
+  console.log('🔍 testFS called');
   try {
+    console.log('🔍 About to call bunery.fs.writeFile...');
     // Test writing and reading
     const testFile = '/tmp/bunery-test.txt';
     await bunery.fs.writeFile(testFile, 'Hello from Bunery! 🥐');
+    console.log('✅ writeFile success');
     const content = await bunery.fs.readFile(testFile);
+    console.log('✅ readFile success:', content);
     
     const exists = await bunery.fs.exists(testFile);
     const stats = await bunery.fs.stat(testFile);
