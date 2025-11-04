@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bunery API Demo</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/styles.css">
   <style>
     .api-grid {
       display: grid;
@@ -61,7 +61,7 @@
 <body>
   <div class="app">
     <div class="hero">
-      <img src="bunery-logo.svg" alt="Bunery" class="logo">
+      <img src="/bunery-logo.svg" alt="Bunery" class="logo">
       <p>🚀 Bunery API Demo</p>
     </div>
 
@@ -118,11 +118,11 @@
 
     <div class="info" style="margin-top: 2rem;">
       <span>⚡️ All APIs use direct Bun bindings</span>
-      <span><a href="index.html" style="color: #ff1b40; text-decoration: none;">← Back</a></span>
+      <span><button onclick="window.location.href='/index.html'" style="background: none; border: none; color: #ff1b40; cursor: pointer; font: inherit;">← Back</button></span>
     </div>
   </div>
 
-  <script type="module" src="api-demo.ts"></script>
+  <script type="module" src="/api-demo.ts"></script>
 </body>
 </html>
 

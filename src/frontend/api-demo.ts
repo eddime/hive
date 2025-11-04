@@ -1,6 +1,6 @@
 // 🥐 Bunery API Demo
-// Import from local runtime (relative path for now)
-import { bunery } from './bunery-runtime';
+// Import from local runtime (absolute path for asset server)
+import { bunery } from '/bunery-runtime';
 
 function showResult(id: string, data: any, isError = false) {
   const el = document.getElementById(id);
