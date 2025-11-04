@@ -122,7 +122,13 @@
     </div>
   </div>
 
-  <script type="module" src="/api-demo.ts"></script>
+  <script type="module">
+    // Force reload runtime with timestamp
+    import('/bunery-runtime.ts?v=' + Date.now()).then(m => {
+      window.buneryModule = m;
+      return import('/api-demo.ts?v=' + Date.now());
+    });
+  </script>
 </body>
 </html>
 
