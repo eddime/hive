@@ -1,5 +1,6 @@
 // 🥐 Bunery API Demo
-import { bunery } from '../../packages/runtime/src/index';
+// Import from local runtime (relative path for now)
+import { bunery } from './bunery-runtime';
 
 function showResult(id: string, data: any, isError = false) {
   const el = document.getElementById(id);

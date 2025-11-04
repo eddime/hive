@@ -39,7 +39,7 @@ export default {
       // Asset server: Embeds all files in binary, serves via HTTP at runtime
       // NO SIZE LIMITS! Works in dev AND production! 🚀
       assetServer: true,
-      entryPoint: "index.html",  // Entry HTML file (Phaser Candy Catch game)
+      entryPoint: "/index.html",  // Entry HTML file (main page)
     },
     
     // Platform-specific settings
