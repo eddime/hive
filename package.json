@@ -1,12 +1,25 @@
 {
   "name": "bunery",
   "version": "1.0.0",
-  "description": "🥐 Bake your desktop apps with Bun + Webview",
-  "type": "module",
+  "author": "Edgar Metzler",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eddime/bunery.git"
+  },
   "main": "./cli.ts",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
   "bin": {
     "bunery": "./cli.ts",
     "bake": "./cli.ts"
+  },
+  "bugs": {
+    "url": "https://github.com/eddime/bunery/issues"
+  },
+  "description": "🥐 Bake your desktop apps with Bun + Webview",
+  "engines": {
+    "bun": ">=1.0.0"
   },
   "files": [
     "cli.ts",
@@ -23,16 +36,7 @@
     "BINDINGS.md",
     "GETTING_STARTED.md"
   ],
-  "author": "Edgar Metzler",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/eddime/bunery.git"
-  },
   "homepage": "https://github.com/eddime/bunery#readme",
-  "bugs": {
-    "url": "https://github.com/eddime/bunery/issues"
-  },
   "keywords": [
     "bun",
     "webview",
@@ -49,18 +53,14 @@
     "windows",
     "linux"
   ],
-  "engines": {
-    "bun": ">=1.0.0"
-  },
+  "license": "MIT",
   "scripts": {
     "start": "bun run scripts/dev.ts",
     "dev": "bun run scripts/dev.ts",
     "bake": "bun cli.ts"
   },
+  "type": "module",
   "dependencies": {
     "webview-bun": "^2.4.0"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
   }
 }
