@@ -14,6 +14,10 @@ function showResult(id: string, data: any, isError = false) {
 // Test File System API
 (window as any).testFS = async () => {
   try {
+    // Debug: Check if binding exists
+    console.log('Checking __fsWriteFile:', typeof (window as any).__fsWriteFile);
+    console.log('All window bindings:', Object.keys(window).filter(k => k.startsWith('__')));
+    
     // Test writing and reading
     const testFile = '/tmp/bunery-test.txt';
     await bunery.fs.writeFile(testFile, 'Hello from Bunery! 🥐');
