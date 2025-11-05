@@ -5,6 +5,11 @@
  */
 
 #include <windows.h>
+#include <commctrl.h>
+#include <map>
+
+// Store min sizes per window (avoid using GWLP_USERDATA which webview-bun uses!)
+static std::map<HWND, POINT> g_min_sizes;
 
 extern "C" {
 
@@ -23,6 +28,23 @@ __declspec(dllexport) void webview_set_icon(void* window_ptr, const char* icon_p
     }
 }
 
+// Window procedure for handling WM_GETMINMAXINFO
+static LRESULT CALLBACK MinSizeWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    if (msg == WM_GETMINMAXINFO) {
+        auto it = g_min_sizes.find(hwnd);
+        if (it != g_min_sizes.end()) {
+            MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+            mmi->ptMinTrackSize.x = it->second.x;
+            mmi->ptMinTrackSize.y = it->second.y;
+        }
+    } else if (msg == WM_NCDESTROY) {
+        // Clean up when window is destroyed
+        g_min_sizes.erase(hwnd);
+        RemoveWindowSubclass(hwnd, MinSizeWndProc, 0);
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
 /**
  * Set minimum window size
  */
@@ -30,10 +52,12 @@ __declspec(dllexport) void webview_set_min_size(void* window_ptr, int width, int
     HWND hwnd = (HWND)window_ptr;
     if (!hwnd) return;
     
-    // Store min size in window data
-    SetWindowLongPtr(hwnd, GWLP_USERDATA, MAKELONG(width, height));
+    // Store min size in map
+    POINT pt = { width, height };
+    g_min_sizes[hwnd] = pt;
     
-    // TODO: Hook WM_GETMINMAXINFO to enforce min size
+    // Install window subclass to handle WM_GETMINMAXINFO
+    SetWindowSubclass(hwnd, MinSizeWndProc, 0, 0);
 }
 
 /**

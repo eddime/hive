@@ -29,7 +29,7 @@ if command -v x86_64-w64-mingw32-g++ &> /dev/null; then
     x86_64-w64-mingw32-g++ -std=c++17 -O3 -shared \
         -static-libgcc -static-libstdc++ \
         -o libwebview_ext.dll webview_extensions_windows.cpp \
-        -lgdi32 -luser32 -lkernel32
+        -lgdi32 -luser32 -lkernel32 -lcomctl32
     echo "✅ Windows: Done"
 else
     echo "⚠️  Windows: mingw-w64 not found, skipping"
