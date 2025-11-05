@@ -12,7 +12,7 @@ export default {
     resizable: true,        // Allow window resizing
     frameless: false,       // Hide window frame (titlebar, borders)
     fullscreen: false,      // F11 to toggle fullscreen
-    startFullscreen: true,  // Auto-fullscreen on launch (games, kiosk mode)
+    startFullscreen: false,  // Auto-fullscreen on launch (games, kiosk mode)
     debug: true,           // Enable debug logs (set to false for production)
   },
 
