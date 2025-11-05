@@ -100,8 +100,11 @@ for (const target of targets) {
     "--target",
     targetStr,
     "--minify",
-    // Bytecode now works on Windows with statically linked DLL!
-    config.build.bytecode ? "--bytecode" : "",
+    // ⚠️ Bytecode crashes on Windows with baseline target (no AVX CPUs)
+    // Error: Segmentation fault at address 0xE8007FF678AD70C5
+    // Works on: macOS, Linux
+    // Fails on: Windows baseline builds (older CPUs without AVX)
+    (config.build.bytecode && target.platform !== "windows") ? "--bytecode" : "",
     ...platformFlags,
     "./src/main.ts",
     "--outfile",

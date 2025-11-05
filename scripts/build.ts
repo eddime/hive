@@ -76,8 +76,8 @@ const buildArgs = [
   "build",
   "--compile",
   config.build.minify ? "--minify" : "",
-  // Bytecode now works on Windows with statically linked DLL!
-  config.build.bytecode ? "--bytecode" : "",
+  // ⚠️ Bytecode crashes on Windows with baseline target (no AVX CPUs)
+  (config.build.bytecode && process.platform !== "win32") ? "--bytecode" : "",
   // Windows-specific flags (only work when building ON Windows)
   ...(process.platform === "win32" && config.build.windows?.icon ? [`--windows-icon=${config.build.windows.icon}`] : []),
   ...(process.platform === "win32" && config.build.windows?.hideConsole ? ["--windows-hide-console"] : []),
@@ -86,8 +86,10 @@ const buildArgs = [
   outfile,
 ].filter(Boolean);
 
-if (config.build.bytecode) {
+if (config.build.bytecode && process.platform !== "win32") {
   console.log("⚡ Bytecode compilation enabled (faster startup)");
+} else if (config.build.bytecode && process.platform === "win32") {
+  console.log("⚠️  Bytecode disabled on Windows (Bun crashes on baseline/no-AVX CPUs)");
 }
 
 const startTime = performance.now();
