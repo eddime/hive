@@ -58,16 +58,22 @@ async function main() {
     return "";
   })();
 
-  // Create webview (parallel with icon loading)
+  // Create webview
   const webview = new Webview(config.window.debug, {
     width: config.window.width,
     height: config.window.height,
     hint: config.window.resizable ? SizeHint.NONE : SizeHint.FIXED,
-    frameless: config.window.frameless,
-    fullscreen: config.window.startFullscreen,
   });
 
   webview.title = config.window.title;
+  
+  // 🚀 Enable performance mode (hardware acceleration, GPU compositing, etc.)
+  try {
+    webview.setPerformanceMode(true);
+    console.log("🚀 Performance mode enabled");
+  } catch (e) {
+    console.warn("⚠️  Performance mode not available:", e);
+  }
   
   // 🎨 Set icon
   try {
@@ -87,6 +93,36 @@ async function main() {
       console.log(`📏 Min size set: ${config.window.minWidth}x${config.window.minHeight}`);
     } catch (e) {
       console.warn("⚠️  Failed to set min size:", e);
+    }
+  }
+
+  // 🪟 Set frameless mode
+  if (config.window.frameless) {
+    try {
+      webview.setFrameless(true);
+      console.log("🪟 Frameless mode enabled");
+    } catch (e) {
+      console.warn("⚠️  Failed to set frameless mode:", e);
+    }
+  }
+
+  // 📌 Set always on top
+  if (config.window.alwaysOnTop) {
+    try {
+      webview.setAlwaysOnTop(true);
+      console.log("📌 Always on top enabled");
+    } catch (e) {
+      console.warn("⚠️  Failed to set always on top:", e);
+    }
+  }
+
+  // 🖥️ Start in fullscreen
+  if (config.window.startFullscreen) {
+    try {
+      webview.toggleFullscreen();
+      console.log("🖥️ Fullscreen mode enabled");
+    } catch (e) {
+      console.warn("⚠️  Failed to toggle fullscreen:", e);
     }
   }
 
