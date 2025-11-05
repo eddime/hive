@@ -11,6 +11,7 @@ hive-*
 
 # Generated files
 src/embedded-html.ts
+lib/embedded-libs-data.ts  # Large Base64-encoded native libraries
 
 # IDE
 .vscode/
