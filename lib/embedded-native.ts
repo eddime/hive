@@ -77,13 +77,6 @@ export function getNativeLibraryPath(): string {
   const tempDir = join(tmpdir(), "bunery-native");
   const libPath = join(tempDir, libName);
 
-  // Check if already extracted
-  if (existsSync(libPath)) {
-    // Set env var for webview-bun to find the library
-    process.env.WEBVIEW_PATH = libPath;
-    return libPath;
-  }
-
   // Get the base64 data
   const base64Data = EMBEDDED_LIBS[libKey as keyof typeof EMBEDDED_LIBS];
   if (!base64Data) {
@@ -93,8 +86,43 @@ export function getNativeLibraryPath(): string {
     );
   }
 
-  // Decode and write to temp directory
+  // Decode to compare
   const binaryData = Buffer.from(base64Data, "base64");
+
+  // Check if already extracted AND has correct size (avoid stale cache)
+  if (existsSync(libPath)) {
+    try {
+      const stats = Bun.file(libPath).size;
+      if (stats === binaryData.length) {
+        // Same size - assume it's current
+        console.log(`✅ Native library already extracted (${(stats / 1024).toFixed(1)}KB): ${libPath}`);
+        process.env.WEBVIEW_PATH = libPath;
+        return libPath;
+      } else {
+        // Different size - old version! Delete and re-extract
+        console.log(`🔄 Updating cached library (${(stats / 1024).toFixed(1)}KB → ${(binaryData.length / 1024).toFixed(1)}KB)...`);
+        try {
+          if (platform === "win32") {
+            Bun.spawnSync(["cmd", "/c", "del", "/f", "/q", libPath]);
+          } else {
+            Bun.spawnSync(["rm", "-f", libPath]);
+          }
+        } catch {}
+      }
+    } catch (e) {
+      // Can't check size, just delete and re-extract
+      console.log(`🔄 Re-extracting library (cache check failed)...`);
+      try {
+        if (platform === "win32") {
+          Bun.spawnSync(["cmd", "/c", "del", "/f", "/q", libPath]);
+        } else {
+          Bun.spawnSync(["rm", "-f", libPath]);
+        }
+      } catch {}
+    }
+  }
+
+  // Write to temp directory
 
   // Ensure temp directory exists
   if (!existsSync(tempDir)) {
