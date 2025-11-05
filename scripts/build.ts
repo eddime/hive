@@ -76,8 +76,8 @@ const buildArgs = [
   "build",
   "--compile",
   config.build.minify ? "--minify" : "",
-  // Bytecode disabled on Windows due to segfault issues
-  (config.build.bytecode && process.platform !== "win32") ? "--bytecode" : "",
+  // Bytecode now works on Windows with statically linked DLL!
+  config.build.bytecode ? "--bytecode" : "",
   // Windows-specific flags (only work when building ON Windows)
   ...(process.platform === "win32" && config.build.windows?.icon ? [`--windows-icon=${config.build.windows.icon}`] : []),
   ...(process.platform === "win32" && config.build.windows?.hideConsole ? ["--windows-hide-console"] : []),
@@ -86,10 +86,8 @@ const buildArgs = [
   outfile,
 ].filter(Boolean);
 
-if (config.build.bytecode && process.platform !== "win32") {
+if (config.build.bytecode) {
   console.log("⚡ Bytecode compilation enabled (faster startup)");
-} else if (config.build.bytecode && process.platform === "win32") {
-  console.log("ℹ️  Bytecode disabled on Windows (stability)");
 }
 
 const startTime = performance.now();
