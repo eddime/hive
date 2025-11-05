@@ -92,32 +92,25 @@ export function getNativeLibraryPath(): string {
   // Check if already extracted AND has correct size (avoid stale cache)
   if (existsSync(libPath)) {
     try {
-      const stats = Bun.file(libPath).size;
-      if (stats === binaryData.length) {
+      const { statSync, unlinkSync } = require("fs");
+      const stats = statSync(libPath);
+      if (stats.size === binaryData.length) {
         // Same size - assume it's current
-        console.log(`✅ Native library already extracted (${(stats / 1024).toFixed(1)}KB): ${libPath}`);
+        console.log(`✅ Native library already extracted (${(stats.size / 1024).toFixed(1)}KB): ${libPath}`);
         process.env.WEBVIEW_PATH = libPath;
         return libPath;
       } else {
         // Different size - old version! Delete and re-extract
-        console.log(`🔄 Updating cached library (${(stats / 1024).toFixed(1)}KB → ${(binaryData.length / 1024).toFixed(1)}KB)...`);
-        try {
-          if (platform === "win32") {
-            Bun.spawnSync(["cmd", "/c", "del", "/f", "/q", libPath]);
-          } else {
-            Bun.spawnSync(["rm", "-f", libPath]);
-          }
-        } catch {}
+        console.log(`🔄 Updating cached library (${(stats.size / 1024).toFixed(1)}KB → ${(binaryData.length / 1024).toFixed(1)}KB)...`);
+        // Force delete old file
+        unlinkSync(libPath);
       }
     } catch (e) {
       // Can't check size, just delete and re-extract
-      console.log(`🔄 Re-extracting library (cache check failed)...`);
+      console.log(`🔄 Re-extracting library (cache check failed: ${e})...`);
       try {
-        if (platform === "win32") {
-          Bun.spawnSync(["cmd", "/c", "del", "/f", "/q", libPath]);
-        } else {
-          Bun.spawnSync(["rm", "-f", libPath]);
-        }
+        const { unlinkSync } = require("fs");
+        unlinkSync(libPath);
       } catch {}
     }
   }
