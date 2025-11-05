@@ -114,7 +114,34 @@ if (exitCode === 0) {
     }
   }
   
-  const stats = await Bun.file(outfile).stat();
+  let stats = await Bun.file(outfile).stat();
+  const originalSizeMB = (stats.size / (1024 * 1024)).toFixed(1);
+  
+  // 🗜️ UPX compression (if enabled)
+  if (config.build.upx && Bun.which("upx")) {
+    const upxLevel = config.build.upxLevel || 9;
+    console.log(`   🗜️  Compressing with UPX (level ${upxLevel})...`);
+    
+    // macOS needs --force-macos flag (experimental support)
+    const upxArgs = process.platform === "darwin"
+      ? ["--best", "--lzma", `-${upxLevel}`, "--force-macos", outfile]
+      : ["--best", "--lzma", `-${upxLevel}`, outfile];
+    
+    const upxProc = Bun.spawnSync(["upx", ...upxArgs], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    
+    if (upxProc.exitCode === 0) {
+      stats = await Bun.file(outfile).stat();
+      const compressedSizeMB = (stats.size / (1024 * 1024)).toFixed(1);
+      const savings = ((1 - stats.size / (parseFloat(originalSizeMB) * 1024 * 1024)) * 100).toFixed(0);
+      console.log(`   ✅ UPX: ${originalSizeMB} MB → ${compressedSizeMB} MB (${savings}% smaller)`);
+    } else {
+      console.warn(`   ⚠️  UPX compression skipped (${process.platform} not fully supported)`);
+    }
+  }
+  
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
   
   // Copy or embed native libraries based on config

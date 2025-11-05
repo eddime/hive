@@ -34,6 +34,8 @@ export default {
     sourcemap: false,   // Disabled for smaller binaries
     bytecode: true,     // ⚡ ENABLED! webview-bun patched to remove top-level await
     strip: true,        // Strip debug symbols (smaller binary, ~30% size reduction)
+    upx: true,          // 🗜️ UPX compression (50-70% size reduction, slower startup)
+    upxLevel: 9,        // Compression level 1-9 (9 = best compression, slowest)
     outdir: "dist",     // Output directory
     outfile: "bunery",  // Executable name
     
