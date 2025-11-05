@@ -1,5 +1,8 @@
 // 🥐 Bunery Cross-Platform Build Script
 import config from "../bunery.config";
+import { resolve } from "path";
+
+const PROJECT_ROOT = resolve(import.meta.dir, "..");
 
 const targets = [
   { platform: "darwin", arch: "x64", ext: "", name: "macOS-Intel" },
@@ -259,6 +262,7 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
     if (target.platform === "windows") {
       if (config.build.embedNativeLibs !== false) {
         console.log(`   ✨ Native library embedded (single-file executable)`);
+        console.log(`   🎨 Extensions embedded (setIcon, setMinSize, frameless, fullscreen, alwaysOnTop)`);
       } else {
         const libSource = `node_modules/webview-bun/build/libwebview.dll`;
         const libDest = `${config.build.outdir}/libwebview.dll`;
@@ -304,7 +308,8 @@ exec "$DIR/${config.build.outfile}-bin" "$@"
     } else if (target.platform === "linux") {
       if (config.build.embedNativeLibs !== false) {
         console.log(`   ✨ Native library embedded (single-file executable)`);
-      } else {
+        console.log(`   🎨 Extensions embedded (setIcon, setMinSize, frameless, fullscreen, alwaysOnTop)`);
+      } else{
         const libName = `libwebview-${target.arch}.so`;
         const libSource = `node_modules/webview-bun/build/${libName}`;
         const libDest = `${config.build.outdir}/${libName}`;
