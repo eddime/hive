@@ -3,8 +3,6 @@
 
 import { dlopen, FFIType } from "bun:ffi";
 import { resolve, join } from "path";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
 
 // Embedded native libraries as base64 (for production builds)
 // These will be generated during `bun bake` production build

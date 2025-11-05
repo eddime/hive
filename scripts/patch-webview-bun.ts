@@ -34,14 +34,20 @@ const original = `if (process.env.WEBVIEW_PATH) {
 
 const patched = `// Use WEBVIEW_PATH env var (set by Bunery's embedded-native.ts for single-file executables)
 // This avoids path resolution issues in compiled binaries
+console.log("[webview-bun DEBUG] WEBVIEW_PATH:", process.env.WEBVIEW_PATH || "NOT SET");
 if (process.env.WEBVIEW_PATH) {
+  console.log("[webview-bun DEBUG] Using WEBVIEW_PATH:", process.env.WEBVIEW_PATH);
   lib_file = { default: process.env.WEBVIEW_PATH };
-} else if (process.platform === "win32") {
-  lib_file = { default: new URL("../build/libwebview.dll", import.meta.url).pathname };
-} else if (process.platform === "linux") {
-  lib_file = { default: new URL(\`../build/libwebview-\${process.arch}.so\`, import.meta.url).pathname };
-} else if (process.platform === "darwin") {
-  lib_file = { default: new URL("../build/libwebview.dylib", import.meta.url).pathname };
+} else {
+  console.log("[webview-bun DEBUG] WEBVIEW_PATH not set, using fallback for platform:", process.platform);
+  if (process.platform === "win32") {
+    lib_file = { default: new URL("../build/libwebview.dll", import.meta.url).pathname };
+  } else if (process.platform === "linux") {
+    lib_file = { default: new URL(\`../build/libwebview-\${process.arch}.so\`, import.meta.url).pathname };
+  } else if (process.platform === "darwin") {
+    lib_file = { default: new URL("../build/libwebview.dylib", import.meta.url).pathname };
+  }
+  console.log("[webview-bun DEBUG] Fallback path:", lib_file?.default);
 }`;
 
 if (content.includes(patched)) {

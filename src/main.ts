@@ -2,10 +2,27 @@
 // ⚠️  DON'T EDIT THIS FILE unless you know what you're doing!
 // 👉 Edit your app in src/frontend/ and src/backend/
 
-// 🔧 CRITICAL: Extract native library BEFORE webview import!
-// Webview must be imported AFTER this runs to ensure WEBVIEW_PATH is set
+// 🔧 CRITICAL: Extract native library BEFORE any other imports!
+// This MUST be the very first thing that runs to set WEBVIEW_PATH
 import { getNativeLibraryPath } from "../lib/embedded-native";
-getNativeLibraryPath(); // Sets process.env.WEBVIEW_PATH
+
+console.log("🔧 [DEBUG] About to extract native library...");
+console.log(`🔧 [DEBUG] Platform: ${process.platform}`);
+console.log(`🔧 [DEBUG] NODE_ENV: ${process.env.NODE_ENV || "not set"}`);
+console.log(`🔧 [DEBUG] WEBVIEW_PATH before: ${process.env.WEBVIEW_PATH || "not set"}`);
+
+try {
+  const libPath = getNativeLibraryPath(); // Sets process.env.WEBVIEW_PATH
+  console.log(`✅ Native library extracted: ${libPath}`);
+  console.log(`✅ WEBVIEW_PATH is now: ${process.env.WEBVIEW_PATH}`);
+  
+  if (!process.env.WEBVIEW_PATH) {
+    throw new Error("WEBVIEW_PATH was not set by getNativeLibraryPath()!");
+  }
+} catch (error) {
+  console.error("❌ FATAL: Failed to extract native library:", error);
+  process.exit(1);
+}
 
 // Import everything EXCEPT webview at top level
 import { htmlContent, htmlPath, embeddedAssets } from "./embedded-html";
@@ -618,6 +635,13 @@ const server = new AssetServer();
 // Start immediately (wrapped to avoid top-level await for bytecode caching)
 (async () => {
 try {
+  await main();
+} catch (error) {
+  console.error("Fatal error:", error);
+  process.exit(1);
+}
+})();
+
   await main();
 } catch (error) {
   console.error("Fatal error:", error);

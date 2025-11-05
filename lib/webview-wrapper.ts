@@ -2,12 +2,27 @@
  * 🥐 Bunery Webview Wrapper
  * 
  * webview-bun + native extensions for missing features
+ * 
+ * 🔧 IMPORTANT: This module lazy-loads webview-bun to ensure
+ * WEBVIEW_PATH is set before the native library is loaded!
  */
 
-import { Webview as WebviewBun, SizeHint } from "webview-bun";
 import { dlopen, FFIType } from "bun:ffi";
 import { resolve } from "path";
 
+// Lazy-load webview-bun to ensure WEBVIEW_PATH is set first
+let WebviewBun: any = null;
+let SizeHint: any = null;
+
+async function ensureWebviewLoaded() {
+  if (!WebviewBun) {
+    const webview = await import("webview-bun");
+    WebviewBun = webview.Webview;
+    SizeHint = webview.SizeHint;
+  }
+}
+
+// Export SizeHint via getter to maintain lazy loading
 export { SizeHint };
 
 // Load native extensions (try embedded first, then fallback paths)
